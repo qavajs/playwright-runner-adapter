@@ -2,14 +2,13 @@
   "name": "@qavajs/playwright-runner-adapter",
   "version": "0.1.0",
   "description": "adapter for playwright test runner",
-  "main": "index.js",
   "scripts": {
     "build": "tsc",
     "test:ui": "playwright test --config test/playwright.config.ts --ui",
     "test:e2e": "playwright test --config test/playwright-e2e.config.ts"
   },
   "author": "Alexandr Galichenko",
-  "license": "ISC",
+  "license": "MIT",
   "dependencies": {
     "@cucumber/gherkin": "^28.0.0",
     "@cucumber/messages": "^24.1.0",

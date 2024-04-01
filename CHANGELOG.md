@@ -11,6 +11,4 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 :microscope: - experimental
 
 ## [0.1.0]
-- :pencil: cleaned up dependencies
-- :rocket: added value wait and validation
-- 
+- :rocket: initial implementation

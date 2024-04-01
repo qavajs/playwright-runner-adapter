@@ -1,0 +1,27 @@
+name: Test
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        version: [ 18, 20 ]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.version }}
+      - run: npm ci
+      - run: npm run build
+      - run: npm run test:e2e
+      - name: junit report
+        uses: mikepenz/action-junit-report@v4
+        if: always()
+        with:
+          report_paths: './test/results.xml'
+          fail_on_failure: true
