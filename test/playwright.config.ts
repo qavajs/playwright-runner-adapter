@@ -1,8 +1,8 @@
 import {defineConfig, devices} from '@playwright/test';
 import {resolve} from 'node:path';
 
-process.env.CONFIG = resolve('./test/cucumber.ts')
-process.env.PROFILE = 'default'
+process.env.CONFIG = 'test/cucumber.ts';
+process.env.PROFILE = 'default';
 
 /**
  * Read environment variables from file.

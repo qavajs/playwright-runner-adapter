@@ -1,6 +1,7 @@
 import {loadStepDefinitions, loadFeatures} from './loader';
+import { join } from 'node:path';
 
-const config = require(process.env.CONFIG ?? 'config.js');
+const config = require(join(process.cwd(), process.env.CONFIG ?? 'config.js'));
 const profile = process.env.PROFILE ?? 'default';
 
 const resolvedConfig = config[profile];
