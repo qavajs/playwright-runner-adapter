@@ -25,3 +25,9 @@ Feature: test feature
       first
       second
       """
+
+  Scenario: log
+    Given log
+
+  Scenario: attach
+    Given attach

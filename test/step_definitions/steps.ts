@@ -1,4 +1,4 @@
-import { Given, When, setWorldConstructor, DataTable } from '@cucumber/cucumber';
+import { Given, When, setWorldConstructor, DataTable, Before } from '@cucumber/cucumber';
 import { expect } from '@playwright/test';
 import { PlaywrightWorld } from '../../src/PlaywrightWorld';
 
@@ -6,11 +6,12 @@ class ExtendedPlaywrightWorld extends PlaywrightWorld {
     constructor(options: any) {
         super(options);
     }
+
 }
 
-setWorldConstructor(ExtendedPlaywrightWorld)
+setWorldConstructor(ExtendedPlaywrightWorld);
 
-Given('open {string} url', async function (this: PlaywrightWorld, url) {
+Given('open {string} url', async function (this: ExtendedPlaywrightWorld, url) {
     await this.page.goto(url);
 });
 
@@ -24,4 +25,12 @@ When('data table step', async function (dataTable: DataTable) {
 
 When('multiline step', async function (multiline: string) {
     expect(multiline).toEqual('first\nsecond')
+});
+
+When('log', async function () {
+    this.log('some data');
+});
+
+When('attach', async function () {
+   this.attach(JSON.stringify({json: 'data'}), { mediaType: 'application/json', fileName: 'data.json' })
 });

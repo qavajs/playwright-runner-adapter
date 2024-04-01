@@ -1,4 +1,4 @@
-import {APIRequestContext, Browser, BrowserContext, Page} from '@playwright/test';
+import { APIRequestContext, Browser, BrowserContext, Page, test } from '@playwright/test';
 
 export class PlaywrightWorld {
     page!: Page;
@@ -9,15 +9,17 @@ export class PlaywrightWorld {
     log!: (data: any) => void;
     attach!: (data: any, details?: { filename?: string, mediaType: string }) => void;
     parameters!: string;
+    test = test;
 
     constructor(options: any) {
         this.log = options.log;
         this.attach = options.attach;
         this.parameters = options.parameters;
-        this.browser = options.browser;
-        this.context = options.context;
-        this.browserName = options.browserName;
-        this.request = options.request;
-        this.page = options.page;
+    }
+
+    init = ({ browser, context, page }: { browser: Browser, context: BrowserContext, page: Page }) => {
+        this.browser = browser;
+        this.context = context;
+        this.page = page;
     }
 }

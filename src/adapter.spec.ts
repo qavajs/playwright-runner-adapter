@@ -1,4 +1,3 @@
-import {test} from '@playwright/test';
 import {loadStepDefinitions, loadFeatures} from './loader';
 
 const config = require(process.env.CONFIG ?? 'config.js');
@@ -8,6 +7,21 @@ const resolvedConfig = config[profile];
 const features = loadFeatures(resolvedConfig.paths);
 const supportCodeLibrary = loadStepDefinitions(resolvedConfig.require);
 
+function log(data: any) {
+    console.log(data);
+}
+function attach(this: { test: any }, body: any, details: any) {
+    const fileName = details.fileName ?? 'attachment';
+    const contentType = details.mediaType ?? 'text/plain';
+    this.test.info().attach(fileName, { body, contentType })
+}
+const world = new supportCodeLibrary.World({
+    log,
+    attach
+});
+
+const test = world.test;
+
 for (const feature of features) {
     const tests = feature.tests;
     test.describe(feature.feature as string, async () => {
@@ -16,31 +30,18 @@ for (const feature of features) {
                 await beforeAllHook.code.apply({});
             });
         }
+
+        test.beforeEach(world.init);
+
         for (const testCase of tests) {
             const tag = testCase.tags.map(tag => tag.name);
-            test(testCase.name, {tag}, async ({page, context, browser, browserName, request}) => {
-                function log(data: any) {
-                    console.log(data);
-                }
-                function attach(body: any, details: any) {
-                    const fileName = details.fileName ?? 'attachment';
-                    const contentType = details.mediaType ?? 'text/plain';
-                    test.info().attach(fileName, { body, contentType })
-                }
-                const world = new supportCodeLibrary.World({
-                    log,
-                    attach,
-                    page,
-                    context,
-                    browser,
-                    browserName,
-                    request
-                });
+
+            test(testCase.name, {tag}, async () => {
                 for (const beforeHook of supportCodeLibrary.beforeTestCaseHookDefinitions) {
                     if (beforeHook.appliesToTestCase(testCase)) {
                         await test.step('Before', async () => {
                             await beforeHook.code.apply(world, [testCase]);
-                        })
+                        });
                     }
                 }
                 for (const pickleStep of testCase.steps) {
