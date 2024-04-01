@@ -7,7 +7,7 @@ export class PlaywrightWorld {
     browserName!: string;
     request!: APIRequestContext;
     log!: (data: any) => void;
-    attach!: (data: any, details?: { filename?: string, mediaType: string }) => void;
+    attach!: (data: any, details?: { fileName?: string, mediaType: string }) => void;
     parameters!: string;
     test = test;
 
