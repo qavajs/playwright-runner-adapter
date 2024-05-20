@@ -10,9 +10,9 @@ Feature: test feature
     Given open '<example>' url
 
     Examples:
-      | example |
-      | https://www.wikipedia.org/       |
-      | https://www.saucedemo.com/       |
+      | example                    |
+      | https://www.wikipedia.org/ |
+      | https://www.saucedemo.com/ |
 
   Scenario: data table
     Given data table step

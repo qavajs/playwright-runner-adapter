@@ -1,12 +1,12 @@
 import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { join, resolve } from 'node:path';
+import { randomUUID } from 'node:crypto';
 import { AstBuilder, compile, GherkinClassicTokenMatcher, Parser } from '@cucumber/gherkin';
-import { IdGenerator } from '@cucumber/messages';
 import { supportCodeLibraryBuilder } from '@cucumber/cucumber';
 import { globSync } from 'glob';
-import {PlaywrightWorld} from './PlaywrightWorld';
+import { PlaywrightWorld } from './PlaywrightWorld';
 
-const uuidFn = IdGenerator.uuid()
+const uuidFn = () => randomUUID();
 const builder = new AstBuilder(uuidFn)
 const matcher = new GherkinClassicTokenMatcher();
 const parser = new Parser(builder, matcher)
@@ -32,4 +32,14 @@ export function loadStepDefinitions(globPattern: string[]) {
         require(filePath);
     }
     return supportCodeLibraryBuilder.finalize();
+}
+
+export function load() {
+    const config = require(join(process.cwd(), process.env.CONFIG ?? 'config.js'));
+    const profile = process.env.PROFILE ?? 'default';
+
+    const resolvedConfig = config[profile];
+    const features = loadFeatures(resolvedConfig.paths);
+    const supportCodeLibrary = loadStepDefinitions(resolvedConfig.require);
+    return { features, supportCodeLibrary }
 }
