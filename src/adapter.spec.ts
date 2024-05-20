@@ -1,12 +1,6 @@
-import {loadStepDefinitions, loadFeatures} from './loader';
-import { join } from 'node:path';
+import { load } from './loader';
 
-const config = require(join(process.cwd(), process.env.CONFIG ?? 'config.js'));
-const profile = process.env.PROFILE ?? 'default';
-
-const resolvedConfig = config[profile];
-const features = loadFeatures(resolvedConfig.paths);
-const supportCodeLibrary = loadStepDefinitions(resolvedConfig.require);
+const { features, supportCodeLibrary } = load();
 
 function log(data: any) {
     console.log(data);
@@ -16,12 +10,9 @@ function attach(this: { test: any }, body: any, details: any) {
     const contentType = details.mediaType ?? 'text/plain';
     this.test.info().attach(fileName, { body, contentType })
 }
-const world = new supportCodeLibrary.World({
-    log,
-    attach
-});
 
-const test = world.test;
+const fixture = new supportCodeLibrary.World({});
+const test = fixture.test;
 
 for (const feature of features) {
     const tests = feature.tests;
@@ -32,12 +23,17 @@ for (const feature of features) {
             });
         }
 
+        const world = new supportCodeLibrary.World({
+            log,
+            attach
+        });
+
         test.beforeEach(world.init);
 
         for (const testCase of tests) {
             const tag = testCase.tags.map(tag => tag.name);
 
-            test(testCase.name, {tag}, async () => {
+            test(testCase.name, { tag }, async () => {
                 for (const beforeHook of supportCodeLibrary.beforeTestCaseHookDefinitions) {
                     if (beforeHook.appliesToTestCase(testCase)) {
                         await test.step('Before', async () => {

@@ -1,14 +1,8 @@
-import {defineConfig, devices} from '@playwright/test';
-import {resolve} from 'node:path';
+import { defineConfig, devices } from '@playwright/test';
+import { resolve } from 'node:path';
 
 process.env.CONFIG = 'test/cucumber.ts';
 process.env.PROFILE = 'default';
-
-/**
- * Read environment variables from file.
- * https://github.com/motdotla/dotenv
- */
-// require('dotenv').config();
 
 /**
  * See https://playwright.dev/docs/test-configuration.
