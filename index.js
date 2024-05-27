@@ -1,4 +1,7 @@
 const { PlaywrightWorld } = require('./adapter/PlaywrightWorld');
+const { defineCucumber } = require('./adapter/defineCucumber');
+
 module.exports = {
-    PlaywrightWorld
+    PlaywrightWorld,
+    defineCucumber
 }

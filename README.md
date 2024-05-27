@@ -20,15 +20,16 @@ export default {
 ### Set testDir
 Set testDir to adapter
 ```typescript
+import { defineCucumber } from '@qavajs/playwright-runner-adapter';
+
+defineCucumber({
+    config: 'test/cucumber.ts',
+    profile: 'default'
+});
+
 export default defineConfig({
     testDir: resolve('node_modules/@qavajs/playwright-runner-adapter/adapter')
 });
-```
-### Add cucumber config
-Set CONFIG and PROFILE environment variables e.g via dotenv library
-```dotenv
-CONFIG=test/cucumber.ts
-PROFILE=default
 ```
 
 ## Advanced Configuration
@@ -57,6 +58,7 @@ class ExtendedPlaywrightWorld extends PlaywrightWorld {
         super(options);
     }
     
+    // set test property with extened one
     test = customTest;
     
     // init arrow function connects fixtures with Cucumber world instance
@@ -66,5 +68,8 @@ class ExtendedPlaywrightWorld extends PlaywrightWorld {
 
 }
 ```
+
+## Limitation
+- ES modules are not supported (at least for node <= 22, where experimental ESM require is introduced)
 
 
