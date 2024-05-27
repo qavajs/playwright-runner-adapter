@@ -1,6 +1,6 @@
 # Change Log
 
-All notable changes to the "@qavajs/steps-playwright" will be documented in this file.
+All notable changes to the "@qavajs/playwright-runner-adapter" will be documented in this file.
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
