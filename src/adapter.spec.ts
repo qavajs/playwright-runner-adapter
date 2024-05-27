@@ -31,7 +31,7 @@ for (const feature of features) {
         test.beforeEach(world.init);
 
         for (const testCase of tests) {
-            const tag = testCase.tags.map(tag => tag.name);
+            const tag = testCase.tags.map((tag: { name: string }) => tag.name);
             test(testCase.name, { tag }, async () => {
                 for (const beforeHook of supportCodeLibrary.beforeTestCaseHookDefinitions) {
                     if (beforeHook.appliesToTestCase(testCase)) {
