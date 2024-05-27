@@ -57,6 +57,7 @@ class ExtendedPlaywrightWorld extends PlaywrightWorld {
         super(options);
     }
     
+    // set test property with extened one
     test = customTest;
     
     // init arrow function connects fixtures with Cucumber world instance
@@ -66,5 +67,8 @@ class ExtendedPlaywrightWorld extends PlaywrightWorld {
 
 }
 ```
+
+## Limitation
+- ES modules are not supported (at least for node <= 22, where experimental ESM require is introduced)
 
 
