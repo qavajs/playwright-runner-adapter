@@ -1,4 +1,4 @@
-import { Given, When, setWorldConstructor, DataTable, Before } from '@cucumber/cucumber';
+import { Given, When, setWorldConstructor, DataTable } from '@cucumber/cucumber';
 import { expect } from '@playwright/test';
 import { PlaywrightWorld } from '../../src/PlaywrightWorld';
 
@@ -6,7 +6,6 @@ class ExtendedPlaywrightWorld extends PlaywrightWorld {
     constructor(options: any) {
         super(options);
     }
-
 }
 
 setWorldConstructor(ExtendedPlaywrightWorld);
@@ -32,5 +31,5 @@ When('log', async function () {
 });
 
 When('attach', async function () {
-   this.attach(JSON.stringify({json: 'data'}), { mediaType: 'application/json', fileName: 'data.json' })
+   this.attach(JSON.stringify({ json: 'data' }), { mediaType: 'application/json', fileName: 'data.json' })
 });

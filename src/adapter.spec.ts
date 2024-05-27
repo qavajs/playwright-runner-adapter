@@ -8,7 +8,7 @@ function log(data: any) {
 function attach(this: { test: any }, body: any, details: any) {
     const fileName = details.fileName ?? 'attachment';
     const contentType = details.mediaType ?? 'text/plain';
-    this.test.info().attach(fileName, { body, contentType })
+    this.test.info().attach(fileName, { body, contentType });
 }
 
 const fixture = new supportCodeLibrary.World({});
@@ -32,7 +32,6 @@ for (const feature of features) {
 
         for (const testCase of tests) {
             const tag = testCase.tags.map(tag => tag.name);
-
             test(testCase.name, { tag }, async () => {
                 for (const beforeHook of supportCodeLibrary.beforeTestCaseHookDefinitions) {
                     if (beforeHook.appliesToTestCase(testCase)) {

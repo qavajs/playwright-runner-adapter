@@ -10,6 +10,9 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 :pencil: - chore
 :microscope: - experimental
 
+## [0.3.0]
+- :rocket: added _defineCucumber_ util function
+
 ## [0.2.0]
 - :rocket: updated fixture implementation
 
