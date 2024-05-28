@@ -12,7 +12,8 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [0.3.0]
 - :rocket: added _defineCucumber_ util function
-
+- :rocket: added logic to process duplicates
+  
 ## [0.2.0]
 - :rocket: updated fixture implementation
 

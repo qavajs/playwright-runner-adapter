@@ -11,6 +11,21 @@ const builder = new AstBuilder(uuidFn)
 const matcher = new GherkinClassicTokenMatcher();
 const parser = new Parser(builder, matcher)
 
+function duplicates(tests: any[]) {
+    const counts: Record<string, number> = {};
+    return tests.map(item => {
+        const name = item.name;
+        if (!counts[name]) {
+            counts[name] = 0;
+        }
+        if (counts[name]) {
+            item.name = `${item.name} #${counts[item.name] + 1}`;
+        }
+        counts[item.name]++;
+        return item;
+    })
+}
+
 export function loadFeatures(globPattern: string[]) {
     const files = globSync(globPattern);
     return files.map(file => {
@@ -18,7 +33,7 @@ export function loadFeatures(globPattern: string[]) {
         const gherkinDocument = parser.parse(readFileSync(filePath, 'utf-8'));
         return {
             feature: gherkinDocument.feature?.name,
-            tests: compile(gherkinDocument, file, uuidFn)
+            tests: duplicates(compile(gherkinDocument, file, uuidFn) as any)
         }
     });
 }

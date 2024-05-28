@@ -1,4 +1,4 @@
-Feature: test feature
+Feature: test feature 2
 
   Background:
     Given simple step
