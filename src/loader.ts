@@ -5,6 +5,8 @@ import { AstBuilder, compile, GherkinClassicTokenMatcher, Parser } from '@cucumb
 import { supportCodeLibraryBuilder } from '@cucumber/cucumber';
 import { globSync } from 'glob';
 import { PlaywrightWorld } from './PlaywrightWorld';
+import esm from 'esm';
+const requireESM = esm(module);
 
 const uuidFn = () => randomUUID();
 const builder = new AstBuilder(uuidFn)
@@ -44,17 +46,21 @@ export function loadStepDefinitions(globPattern: string[]) {
     const files = globSync(globPattern);
     for (const file of files) {
         const filePath = resolve(file);
-        require(filePath);
+        requireESM(filePath);
     }
     return supportCodeLibraryBuilder.finalize();
 }
 
 export function load() {
-    const config = require(join(process.cwd(), process.env.CONFIG ?? 'config.js'));
+    const config = requireESM(join(process.cwd(), process.env.CONFIG ?? 'config.js'));
     const profile = process.env.PROFILE ?? 'default';
 
     const resolvedConfig = config[profile];
     const features = loadFeatures(resolvedConfig.paths);
-    const supportCodeLibrary = loadStepDefinitions(resolvedConfig.require);
+    const supportCodeLibrary = loadStepDefinitions([
+        ...resolvedConfig.requireModule ?? [],
+        ...resolvedConfig.require ?? [],
+        ...resolvedConfig.import ?? []
+    ]);
     return { features, supportCodeLibrary }
 }

@@ -10,6 +10,9 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 :pencil: - chore
 :microscope: - experimental
 
+## [0.4.0]
+- :rocket: added ESM support code loader (via _esm_ module)
+
 ## [0.3.0]
 - :rocket: added _defineCucumber_ util function
 - :rocket: added logic to process duplicates

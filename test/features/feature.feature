@@ -37,3 +37,9 @@ Feature: test feature
 
   Scenario: duplicate
     Given log
+
+  Scenario: cjs
+    Given I am CJS
+
+  Scenario: esm
+    Given I am ESM
