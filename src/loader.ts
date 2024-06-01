@@ -55,6 +55,10 @@ export function load() {
 
     const resolvedConfig = config[profile];
     const features = loadFeatures(resolvedConfig.paths);
-    const supportCodeLibrary = loadStepDefinitions(resolvedConfig.require);
+    const supportCodeLibrary = loadStepDefinitions([
+        ...(resolvedConfig.requireModules ?? []),
+        ...(resolvedConfig.require ?? []),
+        ...(resolvedConfig.import ?? [])
+    ]);
     return { features, supportCodeLibrary }
 }

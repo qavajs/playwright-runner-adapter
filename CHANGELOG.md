@@ -10,6 +10,9 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 :pencil: - chore
 :microscope: - experimental
 
+## [0.4.0]
+- :rocket: added support of _requireModules_ option
+
 ## [0.3.0]
 - :rocket: added _defineCucumber_ util function
 - :rocket: added logic to process duplicates

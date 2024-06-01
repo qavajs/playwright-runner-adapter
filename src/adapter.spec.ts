@@ -5,6 +5,7 @@ const { features, supportCodeLibrary } = load();
 function log(data: any) {
     console.log(data);
 }
+
 function attach(this: { test: any }, body: any, details: any) {
     const fileName = details.fileName ?? 'attachment';
     const contentType = details.mediaType ?? 'text/plain';
