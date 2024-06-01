@@ -1,10 +1,24 @@
 import { Given, When, setWorldConstructor, DataTable } from '@cucumber/cucumber';
-import { expect } from '@playwright/test';
+import { test as base, expect, Page } from '@playwright/test';
 import { PlaywrightWorld } from '../../src/PlaywrightWorld';
+
+const fixture = base.extend({
+    customFixture: async ({}, use) => {
+        await use(42);
+    }
+});
 
 class ExtendedPlaywrightWorld extends PlaywrightWorld {
     constructor(options: any) {
         super(options);
+    }
+
+    customFixture!: number;
+    test = fixture;
+
+    init = ({ page, customFixture }: { page: Page, customFixture: number }) => {
+        this.page = page;
+        this.customFixture = customFixture;
     }
 }
 
@@ -32,4 +46,8 @@ When('log', async function () {
 
 When('attach', async function () {
    this.attach(JSON.stringify({ json: 'data' }), { mediaType: 'application/json', fileName: 'data.json' })
+});
+
+When('custom fixture', async function (this: ExtendedPlaywrightWorld) {
+    expect(this.customFixture).toEqual(42);
 });
