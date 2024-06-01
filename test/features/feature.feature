@@ -37,3 +37,6 @@ Feature: test feature
 
   Scenario: duplicate
     Given log
+
+  Scenario: custom fixture
+    Given custom fixture

@@ -17,7 +17,7 @@ export class PlaywrightWorld {
         this.parameters = options.parameters;
     }
 
-    init = ({ browser, context, page }: { browser: Browser, context: BrowserContext, page: Page }) => {
+    init: ({ [fixture: string]: any }) = ({ browser, context, page }: { browser: Browser, context: BrowserContext, page: Page }) => {
         this.browser = browser;
         this.context = context;
         this.page = page;
