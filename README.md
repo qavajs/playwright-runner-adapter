@@ -1,7 +1,7 @@
 [![npm version](https://badge.fury.io/js/@qavajs%2Fplaywright-runner-adapter.svg)](https://badge.fury.io/js/@qavajs%2Fplaywright-runner-adapter)
 
 # @qavajs/playwright-runner-adapter
-Adapter to run cucumberjs tests via playwright test runner
+Adapter to run cucumber tests via playwright test runner
 
 ## Installation
 
@@ -22,13 +22,11 @@ Set testDir to adapter
 ```typescript
 import { defineCucumber } from '@qavajs/playwright-runner-adapter';
 
-defineCucumber({
-    config: 'test/cucumber.ts',
-    profile: 'default'
-});
-
 export default defineConfig({
-    testDir: resolve('node_modules/@qavajs/playwright-runner-adapter/adapter')
+    testDir: defineCucumber({
+        config: 'test/cucumber.ts',
+        profile: 'default'
+    })
 });
 ```
 
