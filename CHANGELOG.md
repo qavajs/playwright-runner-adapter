@@ -12,6 +12,7 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [0.4.0]
 - :rocket: added support of _requireModules_ option
+- :rocket: improved _defineCucumber_ function to encapsulate adapter path
 - :beetle: updated typing for _init_ property of PlaywrightWorld
 
 ## [0.3.0]

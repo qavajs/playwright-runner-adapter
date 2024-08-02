@@ -1,5 +1,8 @@
 import { APIRequestContext, Browser, BrowserContext, Page, test } from '@playwright/test';
 
+/**
+ * Cucumber world for playwright adapter
+ */
 export class PlaywrightWorld {
     page!: Page;
     context!: BrowserContext;
