@@ -1,10 +1,22 @@
 import { Given, When, setWorldConstructor, DataTable } from '@cucumber/cucumber';
-import { test as base, expect, Page } from '@playwright/test';
+import { test as base, expect as baseExpect, Page, Locator } from '@playwright/test';
 import { PlaywrightWorld } from '../../src/PlaywrightWorld';
 
 const fixture = base.extend({
     customFixture: async ({}, use) => {
         await use(42);
+    }
+});
+
+const customExpect = baseExpect.extend({
+    toAlwaysPass(locator: Locator) {
+        return {
+            message: () => 'pass',
+            pass: true,
+            name: 'toAlwaysPass',
+            expected: 'foo',
+            actual: 'foo',
+        }
     }
 });
 
@@ -15,6 +27,7 @@ class ExtendedPlaywrightWorld extends PlaywrightWorld {
 
     customFixture!: number;
     test = fixture;
+    expect = customExpect;
 
     init = ({ page, customFixture }: { page: Page, customFixture: number }) => {
         this.page = page;
@@ -33,11 +46,11 @@ When(/^simple step$/, async function () {
 });
 
 When('data table step', async function (dataTable: DataTable) {
-    expect(dataTable.raw()).toEqual([['1'], ['2']])
+    this.expect(dataTable.raw()).toEqual([['1'], ['2']])
 });
 
 When('multiline step', async function (multiline: string) {
-    expect(multiline).toEqual('first\nsecond')
+    this.expect(multiline).toEqual('first\nsecond')
 });
 
 When('log', async function () {
@@ -49,5 +62,9 @@ When('attach', async function () {
 });
 
 When('custom fixture', async function (this: ExtendedPlaywrightWorld) {
-    expect(this.customFixture).toEqual(42);
+    this.expect(this.customFixture).toEqual(42);
+});
+
+When('custom expect', async function (this: ExtendedPlaywrightWorld) {
+    this.expect(this.page.locator('body')).toAlwaysPass();
 });

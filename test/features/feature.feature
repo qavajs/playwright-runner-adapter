@@ -40,3 +40,6 @@ Feature: test feature
 
   Scenario: custom fixture
     Given custom fixture
+
+  Scenario: custom expect
+    Given custom expect

@@ -12,6 +12,7 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [0.5.0]
 - :rocket: updated gherkin dependency
+- :rocket: added _expect_ to default world
 
 ## [0.4.0]
 - :rocket: added support of _requireModules_ option
