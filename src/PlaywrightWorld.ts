@@ -1,4 +1,4 @@
-import { APIRequestContext, Browser, BrowserContext, Page, test } from '@playwright/test';
+import { APIRequestContext, Browser, BrowserContext, Page, test, expect } from '@playwright/test';
 
 /**
  * Cucumber world for playwright adapter
@@ -13,6 +13,7 @@ export class PlaywrightWorld {
     attach!: (data: any, details?: { fileName?: string, mediaType: string }) => void;
     parameters!: string;
     test = test;
+    expect = expect;
 
     constructor(options: any) {
         this.log = options.log;
