@@ -1,4 +1,4 @@
-import { Given, When, setWorldConstructor, DataTable } from '@cucumber/cucumber';
+import { Given, When, setWorldConstructor, DataTable, Before, After, BeforeStep, AfterStep } from '@cucumber/cucumber';
 import { test as base, expect as baseExpect, Page, Locator } from '@playwright/test';
 import { PlaywrightWorld } from '../../src/PlaywrightWorld';
 
@@ -67,4 +67,22 @@ When('custom fixture', async function (this: ExtendedPlaywrightWorld) {
 
 When('custom expect', async function (this: ExtendedPlaywrightWorld) {
     this.expect(this.page.locator('body')).toAlwaysPass();
+});
+
+Before(async function (this: ExtendedPlaywrightWorld, testCase) {
+    this.expect(testCase).toBeTruthy();
+});
+
+After(async function (this: ExtendedPlaywrightWorld, testCase) {
+    this.expect(testCase).toBeTruthy();
+    this.expect(testCase.result).toBeTruthy();
+});
+
+BeforeStep(async function (this: ExtendedPlaywrightWorld, testCase) {
+    this.expect(testCase).toBeTruthy();
+});
+
+AfterStep(async function (this: ExtendedPlaywrightWorld, testCase) {
+    this.expect(testCase).toBeTruthy();
+    this.expect(testCase.result).toBeTruthy();
 });

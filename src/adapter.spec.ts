@@ -34,6 +34,7 @@ for (const feature of features) {
         for (const testCase of tests) {
             const tag = testCase.tags.map((tag: { name: string }) => tag.name);
             test(testCase.name, { tag }, async () => {
+                const result: { status: string, error?: any } = { status: 'passed' };
                 for (const beforeHook of supportCodeLibrary.beforeTestCaseHookDefinitions) {
                     if (beforeHook.appliesToTestCase(testCase)) {
                         await test.step('Before', async () => {
@@ -45,7 +46,7 @@ for (const feature of features) {
                     await test.step(pickleStep.text, async () => {
                         for (const beforeStep of supportCodeLibrary.beforeTestStepHookDefinitions) {
                             if (beforeStep.appliesToTestCase(testCase)) {
-                                await beforeStep.code.apply(world);
+                                await beforeStep.code.apply(world, [testCase]);
                             }
                         }
                         const steps = supportCodeLibrary.stepDefinitions
@@ -54,14 +55,12 @@ for (const feature of features) {
                         if (steps.length > 1) throw new Error(`'${pickleStep.text}' matches multiple step definitions`);
                         const [step] = steps;
                         const { parameters} = await step.getInvocationParameters({
-                            // @ts-ignore
                             step: {
                                 text: pickleStep.text,
                                 argument: pickleStep.argument
                             },
                             world
-                        });
-                        const result: { status: string, error?: any } = { status: 'passed' };
+                        } as any);
                         try {
                             await step.code.apply(world, parameters);
                         } catch (err) {
@@ -70,7 +69,7 @@ for (const feature of features) {
                         }
                         for (const afterStep of supportCodeLibrary.afterTestStepHookDefinitions) {
                             if (afterStep.appliesToTestCase(testCase)) {
-                                await afterStep.code.apply(world, [{result}]);
+                                await afterStep.code.apply(world, [{...testCase, result}]);
                             }
                         }
                         if (result.error) throw result.error;
@@ -79,7 +78,7 @@ for (const feature of features) {
                 for (const afterHook of supportCodeLibrary.afterTestCaseHookDefinitions) {
                     if (afterHook.appliesToTestCase(testCase)) {
                         await test.step('After', async () => {
-                            await afterHook.code.apply(world, [testCase]);
+                            await afterHook.code.apply(world, [{...testCase, result}]);
                         });
                     }
                 }
