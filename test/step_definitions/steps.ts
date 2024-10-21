@@ -1,4 +1,14 @@
-import { Given, When, setWorldConstructor, DataTable, Before, After, BeforeStep, AfterStep } from '@cucumber/cucumber';
+import {
+    Given,
+    When,
+    setWorldConstructor,
+    DataTable,
+    Before,
+    After,
+    BeforeStep,
+    AfterStep,
+    ITestCaseHookParameter, ITestStepHookParameter
+} from '@cucumber/cucumber';
 import { test as base, expect as baseExpect, Page, Locator } from '@playwright/test';
 import { PlaywrightWorld } from '../../src/PlaywrightWorld';
 
@@ -69,20 +79,22 @@ When('custom expect', async function (this: ExtendedPlaywrightWorld) {
     this.expect(this.page.locator('body')).toAlwaysPass();
 });
 
-Before(async function (this: ExtendedPlaywrightWorld, testCase) {
-    this.expect(testCase).toBeTruthy();
+Before(async function (this: ExtendedPlaywrightWorld, testCase: ITestCaseHookParameter) {
+    this.expect(testCase.pickle).toBeTruthy();
 });
 
-After(async function (this: ExtendedPlaywrightWorld, testCase) {
-    this.expect(testCase).toBeTruthy();
+After(async function (this: ExtendedPlaywrightWorld, testCase: ITestCaseHookParameter) {
+    this.expect(testCase.pickle).toBeTruthy();
     this.expect(testCase.result).toBeTruthy();
 });
 
-BeforeStep(async function (this: ExtendedPlaywrightWorld, testCase) {
-    this.expect(testCase).toBeTruthy();
+BeforeStep(async function (this: ExtendedPlaywrightWorld, testCase: ITestStepHookParameter) {
+    this.expect(testCase.pickle).toBeTruthy();
+    this.expect(testCase.pickleStep).toBeTruthy();
 });
 
-AfterStep(async function (this: ExtendedPlaywrightWorld, testCase) {
-    this.expect(testCase).toBeTruthy();
+AfterStep(async function (this: ExtendedPlaywrightWorld, testCase: ITestStepHookParameter) {
+    this.expect(testCase.pickle).toBeTruthy();
+    this.expect(testCase.pickleStep).toBeTruthy();
     this.expect(testCase.result).toBeTruthy();
 });

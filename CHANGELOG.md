@@ -10,6 +10,9 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 :pencil: - chore
 :microscope: - experimental
 
+## [0.6.1]
+- :beetle: make params in hooks closer to cucumber types
+
 ## [0.6.0]
 - :rocket: added test case accessor to BeforeStep/AfterStep hooks
 
