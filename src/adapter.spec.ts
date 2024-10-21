@@ -37,7 +37,8 @@ for (const feature of features) {
                 const result: { status: string, error?: any } = { status: 'passed' };
                 for (const beforeHook of supportCodeLibrary.beforeTestCaseHookDefinitions) {
                     if (beforeHook.appliesToTestCase(testCase)) {
-                        await test.step('Before', async () => {
+                        const hookName = beforeHook.name ?? 'Before';
+                        await test.step(hookName, async () => {
                             await beforeHook.code.apply(world, [{
                                 pickle: testCase
                             }]);
@@ -86,7 +87,8 @@ for (const feature of features) {
                 }
                 for (const afterHook of supportCodeLibrary.afterTestCaseHookDefinitions) {
                     if (afterHook.appliesToTestCase(testCase)) {
-                        await test.step('After', async () => {
+                        const hookName = afterHook.name ?? 'After';
+                        await test.step(hookName, async () => {
                             await afterHook.code.apply(world, [{
                                 pickle: testCase, result
                             }]);

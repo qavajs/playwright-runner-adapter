@@ -98,3 +98,12 @@ AfterStep(async function (this: ExtendedPlaywrightWorld, testCase: ITestStepHook
     this.expect(testCase.pickleStep).toBeTruthy();
     this.expect(testCase.result).toBeTruthy();
 });
+
+Before({name: 'Named Before'}, async function (this: ExtendedPlaywrightWorld, testCase: ITestCaseHookParameter) {
+    this.expect(testCase.pickle).toBeTruthy();
+});
+
+After({name: 'Named After'}, async function (this: ExtendedPlaywrightWorld, testCase: ITestCaseHookParameter) {
+    this.expect(testCase.pickle).toBeTruthy();
+    this.expect(testCase.result).toBeTruthy();
+});
