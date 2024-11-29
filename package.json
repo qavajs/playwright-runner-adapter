@@ -1,6 +1,6 @@
 {
   "name": "@qavajs/playwright-runner-adapter",
-  "version": "0.7.0",
+  "version": "1.0.0",
   "description": "adapter for playwright test runner",
   "scripts": {
     "build": "tsc",
@@ -14,9 +14,9 @@
     "glob": "^11.0.0"
   },
   "devDependencies": {
-    "@cucumber/cucumber": "^11.0.1",
-    "@playwright/test": "^1.48.1",
-    "@types/node": "^22.7.7",
-    "typescript": "^5.6.3"
+    "@cucumber/cucumber": "^11.1.0",
+    "@playwright/test": "^1.49.0",
+    "@types/node": "^22.10.1",
+    "typescript": "^5.7.2"
   }
 }
