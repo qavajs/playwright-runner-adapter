@@ -26,7 +26,8 @@ for (const feature of features) {
 
         const world = new supportCodeLibrary.World({
             log,
-            attach
+            attach,
+            supportCodeLibrary
         });
 
         test.beforeEach(world.init);

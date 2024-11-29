@@ -79,6 +79,14 @@ When('custom expect', async function (this: ExtendedPlaywrightWorld) {
     this.expect(this.page.locator('body')).toAlwaysPass();
 });
 
+When('support code library', async function (this: ExtendedPlaywrightWorld) {
+    this.expect(this.supportCodeLibrary).toBeTruthy();
+});
+
+When('execute step', async function (this: ExtendedPlaywrightWorld) {
+    await this.executeStep('simple step');
+});
+
 Before(async function (this: ExtendedPlaywrightWorld, testCase: ITestCaseHookParameter) {
     this.expect(testCase.pickle).toBeTruthy();
 });

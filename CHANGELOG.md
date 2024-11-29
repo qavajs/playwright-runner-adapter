@@ -10,6 +10,21 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 :pencil: - chore
 :microscope: - experimental
 
+## [1.0.0]
+- :rocket: added `executeStep` method to world to execute step definitions programmatically
+```typescript
+When('I do smth complex', async function() {
+    await this.executeStep(`I type 'username' to 'Username Input'`);
+    await this.executeStep(`I type 'password' to 'Password Input'`);
+    await this.executeStep(`I click 'Login Button'`);
+    await this.executeStep(`I fill following fields`, new DataTable([
+        [ 'Order', '123' ],
+        [ 'Delivery Location', 'New York' ]
+    ]))
+});
+```
+- :rocket: added reference to supportCodeLibrary to cucumber world
+
 ## [0.7.0]
 - :rocket: added support of named hooks
 

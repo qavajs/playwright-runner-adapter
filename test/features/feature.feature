@@ -43,3 +43,9 @@ Feature: test feature
 
   Scenario: custom expect
     Given custom expect
+
+  Scenario: support code library
+    Given support code library
+
+  Scenario: execute step
+    Given execute step
