@@ -10,6 +10,10 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 :pencil: - chore
 :microscope: - experimental
 
+## [1.0.1]
+- :pencil: updated dependencies
+- :rocket: renamed adapter spec to cucumber.spec.ts
+
 ## [1.0.0]
 - :rocket: added `executeStep` method to world to execute step definitions programmatically
 ```typescript

@@ -1,17 +1,15 @@
 import { defineConfig, devices } from '@playwright/test';
-import { resolve } from 'node:path';
 import { defineCucumber } from '../src/defineCucumber';
-
-defineCucumber({
-    config: 'test/cucumber.ts',
-    profile: 'default'
-});
 
 /**
  * See https://playwright.dev/docs/test-configuration.
  */
 export default defineConfig({
-    testDir: resolve('src'),
+    testDir: defineCucumber({
+        config: 'test/cucumber.ts',
+        profile: 'default',
+        adapter: '../src'
+    }),
     /* Run tests in files in parallel */
     fullyParallel: true,
     /* Fail the build on CI if you accidentally left test.only in the source code. */
