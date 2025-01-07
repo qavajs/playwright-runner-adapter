@@ -7,6 +7,8 @@ import {
     After,
     BeforeStep,
     AfterStep,
+    BeforeAll,
+    AfterAll,
     ITestCaseHookParameter, ITestStepHookParameter
 } from '@cucumber/cucumber';
 import { test as base, expect as baseExpect, Page, Locator } from '@playwright/test';
@@ -114,4 +116,14 @@ Before({name: 'Named Before'}, async function (this: ExtendedPlaywrightWorld, te
 After({name: 'Named After'}, async function (this: ExtendedPlaywrightWorld, testCase: ITestCaseHookParameter) {
     this.expect(testCase.pickle).toBeTruthy();
     this.expect(testCase.result).toBeTruthy();
+});
+
+BeforeAll(async function () {
+   console.log('Before All');
+   customExpect(1).toEqual(1);
+});
+
+AfterAll(async function () {
+    console.log('After All');
+    customExpect(2).toEqual(2);
 });

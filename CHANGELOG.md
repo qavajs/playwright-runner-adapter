@@ -10,6 +10,10 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 :pencil: - chore
 :microscope: - experimental
 
+## [1.1.0]
+- :rocket: improved BeforeStep/AfterStep logging
+- :beetle: fixed BeforeAll/AfterAll behavior
+
 ## [1.0.1]
 - :pencil: updated dependencies
 - :rocket: renamed adapter spec to cucumber.spec.ts
