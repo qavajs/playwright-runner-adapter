@@ -9,15 +9,22 @@ function log(data: any) {
 function attach(this: { test: any }, body: any, details: any) {
     const fileName = details.fileName ?? 'attachment';
     const contentType = details.mediaType ?? 'text/plain';
-    this.test.info().attach(fileName, {body, contentType});
+    this.test.info().attach(fileName, { body, contentType });
 }
 
 const fixture = new supportCodeLibrary.World({});
 const test = fixture.test;
 
-for (const beforeAllHook of supportCodeLibrary.beforeTestRunHookDefinitions) {
-    test.beforeAll(() => beforeAllHook.code.apply({}));
-}
+test.beforeAll(async () => {
+    for (const beforeAllHook of supportCodeLibrary.beforeTestRunHookDefinitions) {
+        const location = { location: { column: 1, file: beforeAllHook.uri, line: beforeAllHook.line }}
+        await test.step(
+            'Before All',
+            () => beforeAllHook.code.apply({}),
+            location
+        )
+    }
+});
 
 for (const feature of features) {
     const tests = feature.tests;
@@ -28,7 +35,7 @@ for (const feature of features) {
             supportCodeLibrary
         });
 
-        test.beforeEach('Init World', world.init);
+        test.beforeEach('Fixtures', world.init);
 
         test.beforeEach('Before Hooks', async () => {
             const testId = test
@@ -40,9 +47,14 @@ for (const feature of features) {
             for (const beforeHook of supportCodeLibrary.beforeTestCaseHookDefinitions) {
                 if (beforeHook.appliesToTestCase(testCase)) {
                     const hookName = beforeHook.name ?? 'Before';
-                    await test.step(hookName, () => beforeHook.code.apply(world, [{
-                        pickle: testCase
-                    }]));
+                    const location = { location: { column: 1, file: beforeHook.uri, line: beforeHook.line }}
+                    await test.step(
+                        hookName,
+                        () => beforeHook.code.apply(world, [{
+                            pickle: testCase
+                        }]),
+                        location
+                    );
                 }
             }
         });
@@ -61,21 +73,27 @@ for (const feature of features) {
                     if (testInfo.error) {
                         break;
                     }
+                    const steps = supportCodeLibrary.stepDefinitions
+                        .filter(stepDefinition => stepDefinition.matchesStepName(pickleStep.text));
+                    if (steps.length === 0) throw new Error(`Step '${pickleStep.text}' is not defined`);
+                    if (steps.length > 1) throw new Error(`'${pickleStep.text}' matches multiple step definitions`);
+                    const [ step ] = steps;
+                    const location = { location: { column: 1, file: step.uri, line: step.line }}
                     await test.step(pickleStep.text, async () => {
                         for (const beforeStep of supportCodeLibrary.beforeTestStepHookDefinitions) {
                             if (beforeStep.appliesToTestCase(testCase)) {
-                                await test.step('Before Step', () => beforeStep.code.apply(world, [{
-                                    pickle: testCase,
-                                    pickleStep
-                                }]));
+                                const location = { location: { column: 1, file: beforeStep.uri, line: beforeStep.line }}
+                                await test.step(
+                                    'Before Step',
+                                    () => beforeStep.code.apply(world, [{
+                                        pickle: testCase,
+                                        pickleStep
+                                    }]),
+                                    location
+                                );
                             }
                         }
-                        const steps = supportCodeLibrary.stepDefinitions
-                            .filter(stepDefinition => stepDefinition.matchesStepName(pickleStep.text));
-                        if (steps.length === 0) throw new Error(`Step '${pickleStep.text}' is not defined`);
-                        if (steps.length > 1) throw new Error(`'${pickleStep.text}' matches multiple step definitions`);
-                        const [step] = steps;
-                        const {parameters} = await step.getInvocationParameters({
+                        const { parameters } = await step.getInvocationParameters({
                             step: {
                                 text: pickleStep.text,
                                 argument: pickleStep.argument
@@ -90,15 +108,20 @@ for (const feature of features) {
                         } finally {
                             for (const afterStep of supportCodeLibrary.afterTestStepHookDefinitions) {
                                 if (afterStep.appliesToTestCase(testCase)) {
-                                    await test.step('After Step', () => afterStep.code.apply(world, [{
-                                        pickle: testCase,
-                                        pickleStep,
-                                        result: testInfo.result
-                                    }]));
+                                    const location = { location: { column: 1, file: afterStep.uri, line: afterStep.line }}
+                                    await test.step(
+                                        'After Step',
+                                        () => afterStep.code.apply(world, [{
+                                            pickle: testCase,
+                                            pickleStep,
+                                            result: testInfo.result
+                                        }]),
+                                        location
+                                    );
                                 }
                             }
                         }
-                    });
+                    }, location);
                 }
             })
         }
@@ -113,10 +136,15 @@ for (const feature of features) {
             for (const afterHook of supportCodeLibrary.afterTestCaseHookDefinitions) {
                 if (afterHook.appliesToTestCase(testCase)) {
                     const hookName = afterHook.name ?? 'After';
-                    await test.step(hookName, () => afterHook.code.apply(world, [{
-                        pickle: testCase,
-                        result: testInfo.result
-                    }]));
+                    const location = { location: { column: 1, file: afterHook.uri, line: afterHook.line }}
+                    await test.step(
+                        hookName,
+                        () => afterHook.code.apply(world, [{
+                            pickle: testCase,
+                            result: testInfo.result
+                        }]),
+                        location
+                    );
                 }
             }
         });
@@ -124,6 +152,13 @@ for (const feature of features) {
     });
 }
 
-for (const afterAllHook of supportCodeLibrary.afterTestRunHookDefinitions) {
-    test.afterAll(() => afterAllHook.code.apply({}));
-}
+test.afterAll(async () => {
+    for (const afterAllHook of supportCodeLibrary.afterTestRunHookDefinitions) {
+        const location = { location: { column: 1, file: afterAllHook.uri, line: afterAllHook.line }}
+        await test.step(
+            'After All',
+            () => afterAllHook.code.apply({}),
+            location
+        )
+    }
+});
