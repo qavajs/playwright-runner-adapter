@@ -6,6 +6,7 @@ Feature: test feature
   Scenario: simple scenario
     Given open 'https://google.com' url
 
+  @tag
   Scenario Outline: simple scenario <example>
     Given open '<example>' url
 

@@ -54,15 +54,15 @@ Given('open {string} url', async function (this: ExtendedPlaywrightWorld, url) {
 });
 
 When(/^simple step$/, async function () {
-   console.log('pass')
+   console.log('pass');
 });
 
 When('data table step', async function (dataTable: DataTable) {
-    this.expect(dataTable.raw()).toEqual([['1'], ['2']])
+    this.expect(dataTable.raw()).toEqual([['1'], ['2']]);
 });
 
 When('multiline step', async function (multiline: string) {
-    this.expect(multiline).toEqual('first\nsecond')
+    this.expect(multiline).toEqual('first\nsecond');
 });
 
 When('log', async function () {

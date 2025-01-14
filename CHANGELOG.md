@@ -10,6 +10,10 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 :pencil: - chore
 :microscope: - experimental
 
+## [1.2.0]
+- :rocket: reworked hooks via playwright hooks
+- :rocket: display proper location in sources
+
 ## [1.1.1]
 - :beetle: fixed issue with After hooks execution in case of failed test
 
