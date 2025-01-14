@@ -10,6 +10,9 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 :pencil: - chore
 :microscope: - experimental
 
+## [1.1.1]
+- :beetle: fixed issue with After hooks execution in case of failed test
+
 ## [1.1.0]
 - :rocket: improved BeforeStep/AfterStep logging
 - :beetle: fixed BeforeAll/AfterAll behavior
