@@ -89,6 +89,10 @@ When('execute step', async function (this: ExtendedPlaywrightWorld) {
     await this.executeStep('simple step');
 });
 
+When('fail', async function (this: ExtendedPlaywrightWorld) {
+    this.expect(1).toBe(2);
+});
+
 Before(async function (this: ExtendedPlaywrightWorld, testCase: ITestCaseHookParameter) {
     this.expect(testCase.pickle).toBeTruthy();
 });
