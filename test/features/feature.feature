@@ -20,6 +20,7 @@ Feature: test feature
       | 1 |
       | 2 |
 
+  @oneTag @anotherTag
   Scenario: multiline
     Given multiline step
       """
@@ -33,6 +34,7 @@ Feature: test feature
   Scenario: attach
     Given attach
 
+  @notTag
   Scenario: duplicate
     Given log
 

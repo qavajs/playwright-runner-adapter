@@ -10,6 +10,9 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 :pencil: - chore
 :microscope: - experimental
 
+## [1.3.0]
+- :rocket: added `tags` function to translate cucumber tag expression to grep parameter
+
 ## [1.2.0]
 - :rocket: reworked hooks via playwright hooks
 - :rocket: display proper location in sources

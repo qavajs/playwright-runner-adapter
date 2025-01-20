@@ -1,5 +1,6 @@
 import { defineConfig, devices } from '@playwright/test';
 import { defineCucumber } from '../src/defineCucumber';
+import { tags } from '../src/tags';
 
 /**
  * See https://playwright.dev/docs/test-configuration.
@@ -35,7 +36,15 @@ export default defineConfig({
     /* Configure projects for major browsers */
     projects: [
         {
-            name: 'chromium',
+            name: 'test',
+            use: {
+                ...devices['Desktop Chrome'],
+                hasTouch: true
+            },
+        },
+        {
+            name: 'tagged',
+            grep: tags('@oneTag and @anotherTag'),
             use: {
                 ...devices['Desktop Chrome'],
                 hasTouch: true
