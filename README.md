@@ -74,6 +74,16 @@ class ExtendedPlaywrightWorld extends PlaywrightWorld {
 }
 ```
 
+### Tag expression
+It is possible to use regular tag expressions via `tags` util function
+
+```typescript
+import { tags } from '@qavajs/playwright-runner-adapter';
+export default defineConfig({
+    grep: tags('@oneTag and @anotherTag')
+})
+```
+
 ## Limitation
 - ES modules are not supported (at least for node <= 22, where experimental ESM require is introduced)
 
