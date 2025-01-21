@@ -64,7 +64,7 @@ for (const feature of features) {
             const annotation = [
                 { type: 'name', description: testCase.name },
                 { type: 'testId', description: testCase.id },
-                { type: 'tags', description: JSON.stringify(testCase.tags) }
+                { type: 'tags', description: JSON.stringify(tag) }
             ];
             test(testCase.name, { tag, annotation: annotation }, async () => {
                 const testInfo = test.info();
