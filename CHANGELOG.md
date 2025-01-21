@@ -12,6 +12,7 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [1.3.0]
 - :rocket: added `tags` function to translate cucumber tag expression to grep parameter
+- :rocket: improved tags displaying in annotation
 
 ## [1.2.0]
 - :rocket: reworked hooks via playwright hooks
