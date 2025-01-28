@@ -10,6 +10,9 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 :pencil: - chore
 :microscope: - experimental
 
+## [Unreleased]
+- :beetle: removed duplicated tags
+
 ## [1.3.0]
 - :rocket: added `tags` function to translate cucumber tag expression to grep parameter
 - :rocket: improved tags displaying in annotation

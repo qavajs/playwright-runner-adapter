@@ -86,5 +86,6 @@ export default defineConfig({
 
 ## Limitation
 - ES modules are not supported (at least for node <= 22, where experimental ESM require is introduced)
+- `setParallelCanAssign` is not supported (use playwright projects and `fullyParallel` property)
 
 

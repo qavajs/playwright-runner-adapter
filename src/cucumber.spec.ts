@@ -60,7 +60,7 @@ for (const feature of features) {
         });
 
         for (const testCase of tests) {
-            const tag = testCase.tags.map((tag: { name: string }) => tag.name);
+            const tag = [...new Set(testCase.tags.map((tag: { name: string }) => tag.name))];
             const annotation = [
                 { type: 'name', description: testCase.name },
                 { type: 'testId', description: testCase.id },
