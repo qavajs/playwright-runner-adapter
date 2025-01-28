@@ -11,14 +11,10 @@ export default defineConfig({
         profile: 'default',
         adapter: '../src'
     }),
-    /* Run tests in files in parallel */
-    fullyParallel: true,
-    /* Fail the build on CI if you accidentally left test.only in the source code. */
-    forbidOnly: !!process.env.CI,
     /* Retry on CI only */
-    retries: process.env.CI ? 2 : 2,
+    retries: 2,
     /* Opt out of parallel tests on CI. */
-    workers: process.env.CI ? 1 : 1,
+    workers: 3,
     /* Reporter to use. See https://playwright.dev/docs/test-reporters */
     reporter: [
         ['html', { outputFolder: 'report' }],
@@ -43,12 +39,22 @@ export default defineConfig({
             },
         },
         {
-            name: 'tagged',
-            grep: tags('@oneTag and @anotherTag'),
+            name: 'parallel',
+            grep: tags('not @noParallel'),
             use: {
                 ...devices['Desktop Chrome'],
-                hasTouch: true
+                hasTouch: true,
             },
-        }
+            fullyParallel: true
+        },
+        {
+            name: 'serial',
+            grep: tags('@noParallel'),
+            use: {
+                ...devices['Desktop Chrome'],
+                hasTouch: true,
+            },
+            fullyParallel: false
+        },
     ]
 });

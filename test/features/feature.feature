@@ -1,8 +1,10 @@
+@noParallel
 Feature: test feature
 
   Background:
     Given simple step
 
+  @noParallel
   Scenario: simple scenario
     Given open 'https://google.com' url
 
