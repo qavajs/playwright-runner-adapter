@@ -9,6 +9,13 @@
   },
   "author": "Alexandr Galichenko",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/qavajs/playwright-runner-adapter.git"
+  },
+  "bugs": {
+    "url": "https://github.com/qavajs/playwright-runner-adapter/issues"
+  },
   "dependencies": {
     "@cucumber/gherkin": "^32.1.0",
     "@cucumber/tag-expressions": "^6.1.2",
