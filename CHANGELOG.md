@@ -10,7 +10,8 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 :pencil: - chore
 :microscope: - experimental
 
-## [Unreleased]
+## [1.4.0]
+- :rocket: moved `@cucumber/cucumber` to dependencies
 - :beetle: removed duplicated tags
 
 ## [1.3.0]

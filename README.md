@@ -5,7 +5,9 @@ Adapter to run cucumber tests via playwright test runner
 
 ## Installation
 
-`npm install @qavajs/playwright-runner-adapter`
+```
+npm install @qavajs/playwright-runner-adapter
+```
 
 ## Basic Configuration
 
@@ -37,8 +39,7 @@ And then fixtures can be connected with world instance via _init_ property.
 ```typescript
 import { test as base, expect as baseExpect } from '@playwright/test';
 import { SettingsPage } from './settings-page';
-import { setWorldConstructor } from '@cucumber/cucumber';
-import { PlaywrightWorld } from '@qavajs/playwright-runner-adapter/PlaywrightWorld';
+import { setWorldConstructor, PlaywrightWorld } from '@qavajs/playwright-runner-adapter';
 
 type MyFixtures = {
     settingsPage: SettingsPage;
