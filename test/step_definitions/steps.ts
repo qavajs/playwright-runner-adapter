@@ -10,11 +10,15 @@ import {
     BeforeAll,
     AfterAll,
     ITestCaseHookParameter, ITestStepHookParameter
-} from '@cucumber/cucumber';
+} from '../../index';
 import { test as base, expect as baseExpect, Page, Locator } from '@playwright/test';
 import { PlaywrightWorld } from '../../src/PlaywrightWorld';
 
-const fixture = base.extend({
+type Fixture = {
+    customFixture: number
+}
+
+const fixture = base.extend<Fixture>({
     customFixture: async ({}, use) => {
         await use(42);
     }
