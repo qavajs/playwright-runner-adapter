@@ -135,3 +135,7 @@ AfterAll(async function () {
     console.log('After All');
     customExpect(2).toEqual(2);
 });
+
+When('soft fail', async function (this: ExtendedPlaywrightWorld) {
+    this.expect.soft(1).toBe(2);
+});
