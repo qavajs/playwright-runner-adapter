@@ -70,7 +70,7 @@ for (const feature of features) {
                 const testInfo = test.info();
                 testInfo.result = { status: 'passed' };
                 for (const pickleStep of testCase.steps) {
-                    if (testInfo.error) {
+                    if (testInfo.result.error) {
                         break;
                     }
                     const steps = supportCodeLibrary.stepDefinitions

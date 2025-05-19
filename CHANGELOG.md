@@ -5,10 +5,17 @@ All notable changes to the "@qavajs/playwright-runner-adapter" will be documente
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
 :rocket: - new feature
+
 :beetle: - bugfix
+
 :x: - deprecation/removal
+
 :pencil: - chore
+
 :microscope: - experimental
+
+## [1.4.1]
+- :beetle: fixed issue that prevented to properly use soft assertions
 
 ## [1.4.0]
 - :rocket: moved `@cucumber/cucumber` to dependencies
