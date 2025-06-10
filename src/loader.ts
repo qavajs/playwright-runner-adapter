@@ -13,7 +13,7 @@ const parser = new Parser(builder, matcher)
 
 function duplicates(tests: any[]) {
     const counts: Record<string, number> = {};
-    const t = tests.map(item => {
+    return tests.map(item => {
         const name = item.name;
         if (!(name in counts)) {
             counts[name] = 1;
@@ -23,9 +23,7 @@ function duplicates(tests: any[]) {
         }
         counts[name] = counts[name] + 1;
         return item;
-    })
-    console.log(t)
-    return t
+    });
 }
 
 export function loadFeatures(globPattern: string[]) {
