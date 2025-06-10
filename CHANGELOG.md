@@ -14,6 +14,9 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 :microscope: - experimental
 
+## [1.4.2]
+- :beetle: fixed issue with duplicate scenarios
+
 ## [1.4.1]
 - :beetle: fixed issue that prevented to properly use soft assertions
 

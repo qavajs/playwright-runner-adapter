@@ -43,6 +43,15 @@ Feature: test feature
   Scenario: duplicate
     Given log
 
+  Scenario Outline: duplicate scenario outline
+    Given log
+
+    Examples:
+      | example |
+      | 1       |
+      | 2       |
+      | 3       |
+
   Scenario: custom fixture
     Given custom fixture
 
