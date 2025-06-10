@@ -13,17 +13,19 @@ const parser = new Parser(builder, matcher)
 
 function duplicates(tests: any[]) {
     const counts: Record<string, number> = {};
-    return tests.map(item => {
+    const t = tests.map(item => {
         const name = item.name;
-        if (!counts[name]) {
-            counts[name] = 0;
+        if (!(name in counts)) {
+            counts[name] = 1;
         }
-        if (counts[name]) {
-            item.name = `${item.name} #${counts[item.name] + 1}`;
+        if (counts[name] > 1) {
+            item.name = `${item.name} ${counts[name]}`;
         }
-        counts[item.name]++;
+        counts[name] = counts[name] + 1;
         return item;
     })
+    console.log(t)
+    return t
 }
 
 export function loadFeatures(globPattern: string[]) {

@@ -76,7 +76,7 @@ for (const feature of features) {
                     const steps = supportCodeLibrary.stepDefinitions
                         .filter(stepDefinition => stepDefinition.matchesStepName(pickleStep.text));
                     if (steps.length === 0) throw new Error(`Step '${pickleStep.text}' is not defined`);
-                    if (steps.length > 1) throw new Error(`'${pickleStep.text}' matches multiple step definitions`);
+                    if (steps.length > 1) throw new Error(`Step '${pickleStep.text}' matches multiple step definitions`);
                     const [ step ] = steps;
                     const location = { location: { column: 1, file: step.uri, line: step.line }}
                     await test.step(pickleStep.text, async () => {
