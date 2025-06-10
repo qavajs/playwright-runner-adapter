@@ -1,6 +1,6 @@
 {
   "name": "@qavajs/playwright-runner-adapter",
-  "version": "1.4.2",
+  "version": "1.4.3",
   "description": "adapter for playwright test runner",
   "scripts": {
     "build": "tsc",
