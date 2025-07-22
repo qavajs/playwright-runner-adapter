@@ -17,14 +17,14 @@
     "url": "https://github.com/qavajs/playwright-runner-adapter/issues"
   },
   "dependencies": {
-    "@cucumber/gherkin": "^32.1.2",
+    "@cucumber/gherkin": "^33.0.0",
     "@cucumber/tag-expressions": "^6.2.0",
-    "glob": "^11.0.2",
-    "@cucumber/cucumber": "^11.3.0"
+    "glob": "^11.0.3",
+    "@cucumber/cucumber": "^12.1.0"
   },
   "devDependencies": {
-    "@playwright/test": "^1.52.0",
-    "@types/node": "^24.0.0",
+    "@playwright/test": "^1.54.1",
+    "@types/node": "^24.0.15",
     "typescript": "^5.8.3"
   }
 }
