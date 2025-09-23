@@ -14,6 +14,9 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 :microscope: - experimental
 
+## [1.5.0]
+- :rocket: update dependencies
+
 ## [1.4.2]
 - :beetle: fixed issue with duplicate scenarios
 

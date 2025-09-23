@@ -1,6 +1,6 @@
 import { load } from './loader';
 
-const { features, supportCodeLibrary} = load();
+const { features, supportCodeLibrary } = load();
 
 function log(data: any) {
     console.log(data);
