@@ -9,10 +9,11 @@ import {
     AfterStep,
     BeforeAll,
     AfterAll,
-    ITestCaseHookParameter, ITestStepHookParameter
+    ITestCaseHookParameter,
+    ITestStepHookParameter,
+    PlaywrightWorld
 } from '../../index';
 import { test as base, expect as baseExpect, Page, Locator } from '@playwright/test';
-import { PlaywrightWorld } from '../../index';
 
 type Fixture = {
     customFixture: number
