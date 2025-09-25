@@ -3,30 +3,19 @@ import { APIRequestContext, Browser, BrowserContext, Page, test, expect } from '
 /**
  * Cucumber world for playwright adapter
  */
-export class PlaywrightWorld {
-    page!: Page;
-    context!: BrowserContext;
-    browser!: Browser;
-    browserName!: string;
-    request!: APIRequestContext;
+export class TestWorld {
     log!: (data: any) => void;
     attach!: (data: any, details?: { fileName?: string, mediaType: string }) => void;
     parameters!: string;
+    supportCodeLibrary!: any;
     test = test;
     expect = expect;
-    supportCodeLibrary!: any;
 
     constructor(options: any) {
         this.log = options.log;
         this.attach = options.attach;
         this.parameters = options.parameters;
         this.supportCodeLibrary = options.supportCodeLibrary;
-    }
-
-    init: ({ [fixture: string]: any }) = ({ browser, context, page }: { browser: Browser, context: BrowserContext, page: Page }) => {
-        this.browser = browser;
-        this.context = context;
-        this.page = page;
     }
 
     async executeStep(this: any, text: string, extraParam?: any) {
@@ -40,5 +29,22 @@ export class PlaywrightWorld {
         } catch (err) {
             throw new Error(`${text}\n${err}`);
         }
+    }
+}
+
+/**
+ * Cucumber Playwright world for playwright adapter
+ */
+export class PlaywrightWorld extends TestWorld {
+    page!: Page;
+    context!: BrowserContext;
+    browser!: Browser;
+    browserName!: string;
+    request!: APIRequestContext;
+
+    init: ({ [fixture: string]: any }) = ({ browser, context, page }: { browser: Browser, context: BrowserContext, page: Page }) => {
+        this.browser = browser;
+        this.context = context;
+        this.page = page;
     }
 }
