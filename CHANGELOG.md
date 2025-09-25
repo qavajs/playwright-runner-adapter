@@ -15,6 +15,7 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 :microscope: - experimental
 
 ## [1.5.0]
+- :rocket: added export of basic `TestWorld`
 - :rocket: update dependencies
 
 ## [1.4.2]

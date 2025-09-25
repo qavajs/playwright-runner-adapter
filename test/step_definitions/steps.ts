@@ -9,10 +9,11 @@ import {
     AfterStep,
     BeforeAll,
     AfterAll,
-    ITestCaseHookParameter, ITestStepHookParameter
+    ITestCaseHookParameter,
+    ITestStepHookParameter,
+    PlaywrightWorld
 } from '../../index';
 import { test as base, expect as baseExpect, Page, Locator } from '@playwright/test';
-import { PlaywrightWorld } from '../../src/PlaywrightWorld';
 
 type Fixture = {
     customFixture: number
@@ -37,10 +38,6 @@ const customExpect = baseExpect.extend({
 });
 
 class ExtendedPlaywrightWorld extends PlaywrightWorld {
-    constructor(options: any) {
-        super(options);
-    }
-
     customFixture!: number;
     test = fixture;
     expect = customExpect;
