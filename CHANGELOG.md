@@ -14,6 +14,9 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 :microscope: - experimental
 
+## [1.5.1]
+- :rocket: update `tags` method via extending `RegExp`
+
 ## [1.5.0]
 - :rocket: added export of basic `TestWorld`
 - :rocket: update dependencies
