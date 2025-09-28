@@ -1,5 +1,21 @@
 import parse from '@cucumber/tag-expressions'
 
+class TagExpression extends RegExp {
+    private expressionNode: {
+        evaluate(variables: string[]): boolean;
+    };
+
+    constructor(private tagExpression: string) {
+        super('');
+        this.expressionNode = parse(this.tagExpression);
+    }
+
+    test(testName: string) {
+        const tokens = testName.split(/\s+/);
+        return this.expressionNode.evaluate(tokens);
+    }
+}
+
 /**
  * Translate cucumber tag expression to playwright grep
  * @param {string} tagExpression
@@ -10,11 +26,5 @@ import parse from '@cucumber/tag-expressions'
  * })
  */
 export function tags(tagExpression: string): RegExp {
-    const expressionNode = parse(tagExpression);
-    return {
-        test(testName: string) {
-            const tokens = testName.split(' ');
-            return expressionNode.evaluate(tokens);
-        }
-    } as RegExp;
+    return new TagExpression(tagExpression);
 }
