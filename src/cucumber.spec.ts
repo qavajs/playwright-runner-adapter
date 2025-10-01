@@ -7,8 +7,8 @@ function log(data: any) {
 }
 
 function attach(this: { test: any }, body: any, details: any) {
-    const fileName = details.fileName ?? 'attachment';
-    const contentType = details.mediaType ?? 'text/plain';
+    const fileName = details?.fileName ?? 'attachment';
+    const contentType = details?.mediaType ?? 'text/plain';
     this.test.info().attach(fileName, { body, contentType });
 }
 

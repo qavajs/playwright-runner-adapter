@@ -71,7 +71,8 @@ When('log', async function () {
 });
 
 When('attach', async function () {
-   this.attach(JSON.stringify({ json: 'data' }), { mediaType: 'application/json', fileName: 'data.json' })
+   this.attach(JSON.stringify({ json: 'data' }), { mediaType: 'application/json', fileName: 'data.json' });
+   this.attach(JSON.stringify({ json: 'data' }));
 });
 
 When('custom fixture', async function (this: ExtendedPlaywrightWorld) {
