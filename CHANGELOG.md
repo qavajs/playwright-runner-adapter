@@ -14,6 +14,9 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 :microscope: - experimental
 
+## [1.5.2]
+- :beetle: fixed issue with `this.attach`, made `details` parameter as optional
+
 ## [1.5.1]
 - :rocket: update `tags` method via extending `RegExp`
 

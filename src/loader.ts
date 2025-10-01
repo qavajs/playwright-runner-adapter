@@ -7,7 +7,7 @@ import { globSync } from 'glob';
 import { PlaywrightWorld } from './PlaywrightWorld';
 
 const uuidFn = () => randomUUID();
-const builder = new AstBuilder(uuidFn)
+const builder = new AstBuilder(uuidFn);
 const matcher = new GherkinClassicTokenMatcher();
 const parser = new Parser(builder, matcher)
 
