@@ -14,7 +14,7 @@ export function Template(scenario: (...args: any[]) => string) {
             const steps = scenario
                 .split('\n')
                 .map(step => step.trim())
-                .filter(step => step);
+                .filter(Boolean);
             for (const step of steps) {
                 await world.executeStep(step);
             }
