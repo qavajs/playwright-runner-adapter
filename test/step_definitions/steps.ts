@@ -11,8 +11,8 @@ import {
     AfterAll,
     ITestCaseHookParameter,
     ITestStepHookParameter,
-    PlaywrightWorld
-} from '../../index';
+    PlaywrightWorld, Template
+} from '../../adapter';
 import { test as base, expect as baseExpect, Page, Locator } from '@playwright/test';
 
 type Fixture = {
@@ -137,3 +137,8 @@ AfterAll(async function () {
 When('soft fail', async function (this: ExtendedPlaywrightWorld) {
     this.expect.soft(1).toBe(2);
 });
+
+When('template step', Template(() => `
+    simple step
+    log
+`))
