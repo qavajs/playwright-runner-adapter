@@ -14,6 +14,17 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 :microscope: - experimental
 
+## [1.6.0]
+- :rocket: added `Template` utility function
+```typescript
+import { When, Template } from '@qavajs/playwright-runner-adapter';
+
+When('I click {string} and verify {string}', Template((locator, expected) => `
+    I click '${locator}'
+    I expect '${locator} > Value' to equal '${expected}'
+`));
+```
+
 ## [1.5.2]
 - :beetle: fixed issue with `this.attach`, made `details` parameter as optional
 

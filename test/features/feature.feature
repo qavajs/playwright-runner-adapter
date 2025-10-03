@@ -63,3 +63,6 @@ Feature: test feature
 
   Scenario: execute step
     Given execute step
+
+  Scenario: template
+    Given template step
