@@ -28,5 +28,30 @@
     "@playwright/test": "^1.56.1",
     "@types/node": "^24.9.1",
     "typescript": "^5.9.3"
-  }
+  },
+  "keywords": [
+    "test",
+    "automation",
+    "testing",
+    "qa",
+    "quality-assurance",
+    "test-framework",
+    "test-runner",
+    "test-automation",
+    "e2e",
+    "end-to-end",
+    "ui-testing",
+    "integration-testing",
+    "acceptance-testing",
+    "functional-testing",
+    "browser-testing",
+    "mobile-testing",
+    "cross-browser",
+    "bdd",
+    "gherkin",
+    "assertions",
+    "continuous-delivery",
+    "automation-framework",
+    "playwright"
+  ]
 }
