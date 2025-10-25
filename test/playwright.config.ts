@@ -1,6 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
-import { defineCucumber } from '../src/defineCucumber';
-import { tags } from '../src/tags';
+import { defineCucumber, tags } from '../src';
 
 /**
  * See https://playwright.dev/docs/test-configuration.

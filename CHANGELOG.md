@@ -14,6 +14,16 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 :microscope: - experimental
 
+## [1.7.0]
+- :rocket: added `filter` grep utility function
+```typescript
+import { filter } from '@qavajs/playwright-runner-adapter';
+export default defineConfig({
+    grep: filter(name => name.includes('login test'))
+});
+```
+- :rocket: expose `uri` test annotation
+
 ## [1.6.0]
 - :rocket: added `Template` utility function
 ```typescript
