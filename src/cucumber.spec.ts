@@ -63,10 +63,11 @@ for (const feature of features) {
             const tag = [...new Set(testCase.tags.map((tag: { name: string }) => tag.name))];
             const annotation = [
                 { type: 'name', description: testCase.name },
+                { type: 'uri', description: testCase.uri },
                 { type: 'testId', description: testCase.id },
                 { type: 'tags', description: JSON.stringify(tag) }
             ];
-            test(testCase.name, { tag, annotation: annotation }, async () => {
+            test(testCase.name, { tag, annotation }, async () => {
                 const testInfo = test.info();
                 testInfo.result = { status: 'passed' };
                 for (const pickleStep of testCase.steps) {

@@ -75,14 +75,23 @@ class ExtendedPlaywrightWorld extends PlaywrightWorld {
 }
 ```
 
-### Tag expression
+### Tag expression and filter
 It is possible to use regular tag expressions via `tags` util function
 
 ```typescript
 import { tags } from '@qavajs/playwright-runner-adapter';
 export default defineConfig({
     grep: tags('@oneTag and @anotherTag')
-})
+});
+```
+
+or filter tests by predicate
+
+```typescript
+import { filter } from '@qavajs/playwright-runner-adapter';
+export default defineConfig({
+    grep: filter(name => name.includes('login test'))
+});
 ```
 
 ## Limitation
