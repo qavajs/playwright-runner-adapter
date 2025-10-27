@@ -1,6 +1,23 @@
 import { load } from './loader';
+import type { TestInfo } from '@playwright/test';
 
 const { features, supportCodeLibrary } = load();
+
+function getResult(testInfo: TestInfo) {
+    const message = testInfo.errors.length > 0
+        ? testInfo.errors.map((err: any) => err.message).join('\n')
+        : undefined;
+    return {
+        duration: testInfo.duration,
+        message,
+        status: testInfo.status,
+        exception: testInfo.error
+    };
+}
+
+function getLine(step: { uri: string, line: number }) {
+    return { location: { column: 1, file: step.uri, line: step.line }}
+}
 
 function log(data: any) {
     console.log(data);
@@ -17,7 +34,7 @@ const test = fixture.test;
 
 test.beforeAll(async () => {
     for (const beforeAllHook of supportCodeLibrary.beforeTestRunHookDefinitions) {
-        const location = { location: { column: 1, file: beforeAllHook.uri, line: beforeAllHook.line }}
+        const location = getLine(beforeAllHook);
         await test.step(
             'Before All',
             () => beforeAllHook.code.apply({}),
@@ -47,7 +64,7 @@ for (const feature of features) {
             for (const beforeHook of supportCodeLibrary.beforeTestCaseHookDefinitions) {
                 if (beforeHook.appliesToTestCase(testCase)) {
                     const hookName = beforeHook.name ?? 'Before';
-                    const location = { location: { column: 1, file: beforeHook.uri, line: beforeHook.line }}
+                    const location = getLine(beforeHook);
                     await test.step(
                         hookName,
                         () => beforeHook.code.apply(world, [{
@@ -69,9 +86,9 @@ for (const feature of features) {
             ];
             test(testCase.name, { tag, annotation }, async () => {
                 const testInfo = test.info();
-                testInfo.result = { status: 'passed' };
+                const result: { status: string, error?: Error } = { status: 'passed' };
                 for (const pickleStep of testCase.steps) {
-                    if (testInfo.result.error) {
+                    if (result.status !== 'passed') {
                         break;
                     }
                     const steps = supportCodeLibrary.stepDefinitions
@@ -79,11 +96,11 @@ for (const feature of features) {
                     if (steps.length === 0) throw new Error(`Step '${pickleStep.text}' is not defined`);
                     if (steps.length > 1) throw new Error(`Step '${pickleStep.text}' matches multiple step definitions`);
                     const [ step ] = steps;
-                    const location = { location: { column: 1, file: step.uri, line: step.line }}
+                    const location = getLine(step);
                     await test.step(pickleStep.text, async () => {
                         for (const beforeStep of supportCodeLibrary.beforeTestStepHookDefinitions) {
                             if (beforeStep.appliesToTestCase(testCase)) {
-                                const location = { location: { column: 1, file: beforeStep.uri, line: beforeStep.line }}
+                                const location = getLine(beforeStep);
                                 await test.step(
                                     'Before Step',
                                     () => beforeStep.code.apply(world, [{
@@ -104,18 +121,25 @@ for (const feature of features) {
                         try {
                             await step.code.apply(world, parameters);
                         } catch (err: any) {
-                            testInfo.result.error = err;
+                            result.status = 'failed';
+                            result.error = err;
                             throw err;
                         } finally {
                             for (const afterStep of supportCodeLibrary.afterTestStepHookDefinitions) {
                                 if (afterStep.appliesToTestCase(testCase)) {
-                                    const location = { location: { column: 1, file: afterStep.uri, line: afterStep.line }}
+                                    const location = getLine(afterStep);
+                                    console.log(result);
                                     await test.step(
                                         'After Step',
                                         () => afterStep.code.apply(world, [{
                                             pickle: testCase,
                                             pickleStep,
-                                            result: testInfo.result
+                                            result: {
+                                                duration: testCase.duration,
+                                                message: result.error?.message,
+                                                status: result.status,
+                                                exception: result.error
+                                            }
                                         }]),
                                         location
                                     );
@@ -137,12 +161,12 @@ for (const feature of features) {
             for (const afterHook of supportCodeLibrary.afterTestCaseHookDefinitions) {
                 if (afterHook.appliesToTestCase(testCase)) {
                     const hookName = afterHook.name ?? 'After';
-                    const location = { location: { column: 1, file: afterHook.uri, line: afterHook.line }}
+                    const location = getLine(afterHook);
                     await test.step(
                         hookName,
                         () => afterHook.code.apply(world, [{
                             pickle: testCase,
-                            result: testInfo.result
+                            result: getResult(testInfo)
                         }]),
                         location
                     );
@@ -155,7 +179,7 @@ for (const feature of features) {
 
 test.afterAll(async () => {
     for (const afterAllHook of supportCodeLibrary.afterTestRunHookDefinitions) {
-        const location = { location: { column: 1, file: afterAllHook.uri, line: afterAllHook.line }}
+        const location = getLine(afterAllHook);
         await test.step(
             'After All',
             () => afterAllHook.code.apply({}),
