@@ -85,7 +85,6 @@ for (const feature of features) {
                 { type: 'tags', description: JSON.stringify(tag) }
             ];
             test(testCase.name, { tag, annotation }, async () => {
-                const testInfo = test.info();
                 const result: { status: string, error?: Error } = { status: 'passed' };
                 for (const pickleStep of testCase.steps) {
                     if (result.status !== 'passed') {
@@ -128,14 +127,13 @@ for (const feature of features) {
                             for (const afterStep of supportCodeLibrary.afterTestStepHookDefinitions) {
                                 if (afterStep.appliesToTestCase(testCase)) {
                                     const location = getLine(afterStep);
-                                    console.log(result);
                                     await test.step(
                                         'After Step',
                                         () => afterStep.code.apply(world, [{
                                             pickle: testCase,
                                             pickleStep,
                                             result: {
-                                                duration: testCase.duration,
+                                                duration: 0,
                                                 message: result.error?.message,
                                                 status: result.status,
                                                 exception: result.error
