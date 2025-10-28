@@ -13,7 +13,7 @@ import {
     ITestStepHookParameter,
     PlaywrightWorld, Template
 } from '../../adapter';
-import { test as base, expect as baseExpect, Page, Locator } from '@playwright/test';
+import { test as base, expect as baseExpect, Page } from '@playwright/test';
 
 type Fixture = {
     customFixture: number
@@ -26,7 +26,7 @@ const fixture = base.extend<Fixture>({
 });
 
 const customExpect = baseExpect.extend({
-    toAlwaysPass(locator: Locator) {
+    toAlwaysPass() {
         return {
             message: () => 'pass',
             pass: true,
@@ -149,4 +149,8 @@ When('soft fail', async function (this: ExtendedPlaywrightWorld) {
 When('template step', Template(() => `
     simple step
     log
-`))
+`));
+
+When('log {string}', async function (value) {
+    this.log(value);
+});
