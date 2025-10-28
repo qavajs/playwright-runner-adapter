@@ -33,6 +33,7 @@ export function loadFeatures(globPattern: string[]) {
         const gherkinDocument = parser.parse(readFileSync(filePath, 'utf-8'));
         return {
             feature: gherkinDocument.feature?.name,
+            gherkinDocument,
             tests: duplicates(compile(gherkinDocument, file, uuidFn) as any)
         }
     });
