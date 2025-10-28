@@ -14,6 +14,9 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 :microscope: - experimental
 
+## [Unreleased]
+- :rocket: added `gherkinDocument` to hooks parameter
+
 ## [1.7.1]
 - :beetle: fixed `result` property in `After` and `AfterStep` hooks
 

@@ -100,9 +100,10 @@ Before(async function (this: ExtendedPlaywrightWorld, testCase: ITestCaseHookPar
 });
 
 After(async function (this: ExtendedPlaywrightWorld, testCase: ITestCaseHookParameter) {
+    this.expect(testCase.gherkinDocument).toBeTruthy();
     this.expect(testCase.pickle).toBeTruthy();
     this.expect(testCase.result).toBeTruthy();
-    this.expect(testCase.result?.status).toEqual('passed');
+    this.expect(testCase.result?.status).toEqual('PASSED');
     this.expect(testCase.result?.duration).toBeGreaterThan(0);
 });
 
@@ -112,10 +113,11 @@ BeforeStep(async function (this: ExtendedPlaywrightWorld, testCase: ITestStepHoo
 });
 
 AfterStep(async function (this: ExtendedPlaywrightWorld, testCase: ITestStepHookParameter) {
+    this.expect(testCase.gherkinDocument).toBeTruthy();
     this.expect(testCase.pickle).toBeTruthy();
     this.expect(testCase.pickleStep).toBeTruthy();
     this.expect(testCase.result).toBeTruthy();
-    this.expect(testCase.result?.status).toEqual('passed');
+    this.expect(testCase.result?.status).toEqual('PASSED');
 });
 
 Before({name: 'Named Before'}, async function (this: ExtendedPlaywrightWorld, testCase: ITestCaseHookParameter) {
@@ -123,9 +125,10 @@ Before({name: 'Named Before'}, async function (this: ExtendedPlaywrightWorld, te
 });
 
 After({name: 'Named After'}, async function (this: ExtendedPlaywrightWorld, testCase: ITestCaseHookParameter) {
+    this.expect(testCase.gherkinDocument).toBeTruthy();
     this.expect(testCase.pickle).toBeTruthy();
     this.expect(testCase.result).toBeTruthy();
-    this.expect(testCase.result?.status).toEqual('passed');
+    this.expect(testCase.result?.status).toEqual('PASSED');
     this.expect(testCase.result?.duration).toBeGreaterThan(0);
 });
 

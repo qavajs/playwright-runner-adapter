@@ -1,5 +1,6 @@
 import { load } from './loader';
 import type { TestInfo } from '@playwright/test';
+import type { ITestCaseHookParameter, ITestStepHookParameter } from '@cucumber/cucumber';
 
 const { features, supportCodeLibrary } = load();
 
@@ -8,9 +9,9 @@ function getResult(testInfo: TestInfo) {
         ? testInfo.errors.map((err: any) => err.message).join('\n')
         : undefined;
     return {
-        duration: testInfo.duration,
+        duration: testInfo.duration as any,
         message,
-        status: testInfo.status,
+        status: testInfo.status?.toUpperCase(),
         exception: testInfo.error
     };
 }
@@ -68,8 +69,9 @@ for (const feature of features) {
                     await test.step(
                         hookName,
                         () => beforeHook.code.apply(world, [{
+                            gherkinDocument: feature.gherkinDocument,
                             pickle: testCase
-                        }]),
+                        } as ITestCaseHookParameter]),
                         location
                     );
                 }
@@ -103,6 +105,7 @@ for (const feature of features) {
                                 await test.step(
                                     'Before Step',
                                     () => beforeStep.code.apply(world, [{
+                                        gherkinDocument: feature.gherkinDocument,
                                         pickle: testCase,
                                         pickleStep
                                     }]),
@@ -130,15 +133,18 @@ for (const feature of features) {
                                     await test.step(
                                         'After Step',
                                         () => afterStep.code.apply(world, [{
+                                            gherkinDocument: feature.gherkinDocument,
+                                            testCaseStartedId: '0',
+                                            testStepId: '0',
                                             pickle: testCase,
                                             pickleStep,
                                             result: {
-                                                duration: 0,
+                                                duration: 0 as any,
                                                 message: result.error?.message,
-                                                status: result.status,
+                                                status: result.status.toUpperCase(),
                                                 exception: result.error
                                             }
-                                        }]),
+                                        } as ITestStepHookParameter]),
                                         location
                                     );
                                 }
@@ -163,9 +169,11 @@ for (const feature of features) {
                     await test.step(
                         hookName,
                         () => afterHook.code.apply(world, [{
+                            gherkinDocument: feature.gherkinDocument,
+                            testCaseStartedId: '0',
                             pickle: testCase,
                             result: getResult(testInfo)
-                        }]),
+                        } as ITestCaseHookParameter]),
                         location
                     );
                 }
