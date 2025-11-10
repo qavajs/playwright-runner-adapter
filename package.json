@@ -1,6 +1,6 @@
 {
   "name": "@qavajs/playwright-runner-adapter",
-  "version": "1.7.1",
+  "version": "1.8.0",
   "description": "adapter for playwright test runner",
   "main": "adapter/index.js",
   "types": "adapter/index.d.ts",
@@ -19,7 +19,7 @@
     "url": "https://github.com/qavajs/playwright-runner-adapter/issues"
   },
   "dependencies": {
-    "@cucumber/gherkin": "^36.0.0",
+    "@cucumber/gherkin": "^36.1.0",
     "@cucumber/tag-expressions": "^8.0.0",
     "glob": "^11.0.3",
     "@cucumber/cucumber": "^12.2.0"

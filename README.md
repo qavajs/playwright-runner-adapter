@@ -12,7 +12,7 @@ npm install @qavajs/playwright-runner-adapter
 ## Basic Configuration
 
 ### Create cucumber config file
-Set _paths_ and _require_ properties
+Set `paths` and `require` properties
 ```typescript
 export default {
     paths: ['test/features/*.feature'],
@@ -34,8 +34,8 @@ export default defineConfig({
 
 ## Advanced Configuration
 ### Customizing test instance
-Custom test instance can be passed to world constructor as _test_ property. 
-And then fixtures can be connected with world instance via _init_ property.
+Custom test instance can be passed to world constructor as `test` property. 
+And then fixtures can be connected with world instance via `init` function-property.
 ```typescript
 import { test as base, expect as baseExpect } from '@playwright/test';
 import { SettingsPage } from './settings-page';
@@ -97,5 +97,6 @@ export default defineConfig({
 ## Limitation
 - ES modules are not supported (at least for node <= 22, where experimental ESM require is introduced)
 - `setParallelCanAssign` is not supported (use playwright projects and `fullyParallel` property)
+- `CUCUMBER_PARALLEL`, `CUCUMBER_TOTAL_WORKERS` and `CUCUMBER_WORKER_ID` env vars are not supported. Use built-in `info()` method of world property `test`
 
 
