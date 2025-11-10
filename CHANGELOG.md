@@ -14,7 +14,7 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 :microscope: - experimental
 
-## [Unreleased]
+## [1.8.0]
 - :rocket: added `gherkinDocument` to hooks parameter
 
 ## [1.7.1]
