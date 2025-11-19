@@ -14,6 +14,9 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 :microscope: - experimental
 
+## [1.8.1]
+- :rocket: updated dependencies
+
 ## [1.8.0]
 - :rocket: added `gherkinDocument` to hooks parameter
 
