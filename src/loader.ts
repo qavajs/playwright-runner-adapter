@@ -3,6 +3,7 @@ import { join, resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { AstBuilder, compile, GherkinClassicTokenMatcher, Parser } from '@cucumber/gherkin';
 import { supportCodeLibraryBuilder } from '@cucumber/cucumber';
+import type { Pickle, GherkinDocument } from '@cucumber/messages';
 import { globSync } from 'glob';
 import { PlaywrightWorld } from './PlaywrightWorld';
 
@@ -11,7 +12,7 @@ const builder = new AstBuilder(uuidFn);
 const matcher = new GherkinClassicTokenMatcher();
 const parser = new Parser(builder, matcher)
 
-function duplicates(tests: any[]) {
+function duplicates(tests: readonly Pickle[]) {
     const counts: Record<string, number> = {};
     return tests.map(item => {
         const name = item.name;
@@ -26,7 +27,13 @@ function duplicates(tests: any[]) {
     });
 }
 
-export function loadFeatures(globPattern: string[]) {
+type Feature = {
+    feature?: string;
+    gherkinDocument: GherkinDocument;
+    tests: readonly Pickle[];
+}
+
+export function loadFeatures(globPattern: string[]): Feature[] {
     const files = globSync(globPattern);
     return files.map(file => {
         const filePath = resolve(file);
@@ -34,7 +41,7 @@ export function loadFeatures(globPattern: string[]) {
         return {
             feature: gherkinDocument.feature?.name,
             gherkinDocument,
-            tests: duplicates(compile(gherkinDocument, file, uuidFn) as any)
+            tests: duplicates(compile(gherkinDocument, file, uuidFn))
         }
     });
 }
