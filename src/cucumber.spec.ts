@@ -61,7 +61,7 @@ for (const feature of features) {
                 .annotations
                 .find((annotation: { type: string }) => annotation.type === 'testId')
                 .description;
-            const testCase = tests.find(test => test.id === testId);
+            const testCase = tests.find(test => test.id === testId)!;
             for (const beforeHook of supportCodeLibrary.beforeTestCaseHookDefinitions) {
                 if (beforeHook.appliesToTestCase(testCase)) {
                     const hookName = beforeHook.name ?? 'Before';
@@ -161,7 +161,7 @@ for (const feature of features) {
                 .annotations
                 .find((annotation: { type: string }) => annotation.type === 'testId')
                 .description;
-            const testCase = tests.find(test => test.id === testId);
+            const testCase = tests.find(test => test.id === testId)!;
             for (const afterHook of supportCodeLibrary.afterTestCaseHookDefinitions) {
                 if (afterHook.appliesToTestCase(testCase)) {
                     const hookName = afterHook.name ?? 'After';
