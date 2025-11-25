@@ -1,8 +1,15 @@
 import { load } from './loader';
-import type { TestInfo } from '@playwright/test';
+import type { TestInfo, TestType } from '@playwright/test';
 import type { ITestCaseHookParameter, ITestStepHookParameter } from '@cucumber/cucumber';
 
 const { features, supportCodeLibrary } = load();
+
+function getTestId(testInfo: TestInfo) {
+    return testInfo
+        .annotations
+        .find((annotation: { type: string }) => annotation.type === 'testId')!
+        .description;
+}
 
 function getResult(testInfo: TestInfo) {
     const message = testInfo.errors.length > 0
@@ -31,7 +38,7 @@ function attach(this: { test: any }, body: any, details: any) {
 }
 
 const fixture = new supportCodeLibrary.World({});
-const test = fixture.test;
+const test: TestType<any, any> = fixture.test;
 
 test.beforeAll(async () => {
     for (const beforeAllHook of supportCodeLibrary.beforeTestRunHookDefinitions) {
@@ -44,23 +51,28 @@ test.beforeAll(async () => {
     }
 });
 
+const worlds = new Map();
+
 for (const feature of features) {
     const tests = feature.tests;
     test.describe(feature.feature as string, async () => {
-        const world = new supportCodeLibrary.World({
-            log,
-            attach,
-            supportCodeLibrary
-        });
 
-        test.beforeEach('Fixtures', world.init);
+        const worldFactory = (fixtures: any) => {
+            const world = new supportCodeLibrary.World({
+                log,
+                attach,
+                supportCodeLibrary
+            });
+            Object.assign(world, fixtures);
+            worlds.set(getTestId(test.info()), world);
+        };
+        worldFactory.toString = () => { return fixture.init.toString() }
+
+        test.beforeEach('World', worldFactory);
 
         test.beforeEach('Before Hooks', async () => {
-            const testId = test
-                .info()
-                .annotations
-                .find((annotation: { type: string }) => annotation.type === 'testId')
-                .description;
+            const testId = getTestId(test.info());
+            const world = worlds.get(testId);
             const testCase = tests.find(test => test.id === testId)!;
             for (const beforeHook of supportCodeLibrary.beforeTestCaseHookDefinitions) {
                 if (beforeHook.appliesToTestCase(testCase)) {
@@ -87,6 +99,7 @@ for (const feature of features) {
                 { type: 'tags', description: JSON.stringify(tag) }
             ];
             test(testCase.name, { tag, annotation }, async () => {
+                const world = worlds.get(testCase.id);
                 const result: { status: string, error?: Error } = { status: 'passed' };
                 for (const pickleStep of testCase.steps) {
                     if (result.status !== 'passed') {
@@ -157,10 +170,8 @@ for (const feature of features) {
 
         test.afterEach('After Hooks', async () => {
             const testInfo = test.info();
-            const testId = testInfo
-                .annotations
-                .find((annotation: { type: string }) => annotation.type === 'testId')
-                .description;
+            const testId = getTestId(testInfo);
+            const world = worlds.get(testId);
             const testCase = tests.find(test => test.id === testId)!;
             for (const afterHook of supportCodeLibrary.afterTestCaseHookDefinitions) {
                 if (afterHook.appliesToTestCase(testCase)) {
@@ -178,6 +189,11 @@ for (const feature of features) {
                     );
                 }
             }
+        });
+
+        test.afterEach('World', async () => {
+            const testId = getTestId(test.info());
+            worlds.delete(testId);
         });
 
     });
