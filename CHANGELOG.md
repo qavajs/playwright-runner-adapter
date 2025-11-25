@@ -14,6 +14,9 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 :microscope: - experimental
 
+## [1.9.1]
+- :beetle: fixed bug with custom fixture assignment
+
 ## [1.9.0]
 - :rocket: changed logic to construct world in every test case
 

@@ -63,7 +63,7 @@ for (const feature of features) {
                 attach,
                 supportCodeLibrary
             });
-            Object.assign(world, fixtures);
+            world.init(fixtures);
             worlds.set(getTestId(test.info()), world);
         };
         worldFactory.toString = () => { return fixture.init.toString() }

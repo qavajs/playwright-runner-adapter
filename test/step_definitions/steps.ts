@@ -39,12 +39,14 @@ const customExpect = baseExpect.extend({
 
 class ExtendedPlaywrightWorld extends PlaywrightWorld {
     customFixture!: number;
+    renamedCustomFixture!: number;
     test = fixture;
     expect = customExpect;
 
     init = ({ page, customFixture }: { page: Page, customFixture: number }) => {
         this.page = page;
         this.customFixture = customFixture;
+        this.renamedCustomFixture = customFixture;
     }
 }
 
@@ -77,6 +79,7 @@ When('attach', async function () {
 
 When('custom fixture', async function (this: ExtendedPlaywrightWorld) {
     this.expect(this.customFixture).toEqual(42);
+    this.expect(this.renamedCustomFixture).toEqual(42);
 });
 
 When('custom expect', async function (this: ExtendedPlaywrightWorld) {
