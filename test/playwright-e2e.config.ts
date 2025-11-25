@@ -1,5 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
-import { defineCucumber } from '../src/defineCucumber';
+import { defineCucumber } from '../src';
 
 /**
  * Read environment variables from file.

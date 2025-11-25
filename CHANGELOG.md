@@ -14,6 +14,9 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 :microscope: - experimental
 
+## [1.9.0]
+- :rocket: changed logic to construct world in every test case
+
 ## [1.8.1]
 - :rocket: updated dependencies
 
