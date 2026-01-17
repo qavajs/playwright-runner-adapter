@@ -14,6 +14,9 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 :microscope: - experimental
 
+## [1.10.0]
+- :rocket: improved multi line and data table step logging
+
 ## [1.9.1]
 - :beetle: fixed bug with custom fixture assignment
 
