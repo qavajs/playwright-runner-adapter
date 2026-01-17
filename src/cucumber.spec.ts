@@ -37,6 +37,14 @@ function attach(this: { test: any }, body: any, details: any) {
     this.test.info().attach(fileName, { body, contentType });
 }
 
+function stepName(pickleStep: any) {
+    let step = pickleStep.text;
+    if (pickleStep.argument) {
+        step += pickleStep.argument.docString ? ' [MultiLine]' : ' [DataTable]';
+    }
+    return step;
+}
+
 const fixture = new supportCodeLibrary.World({});
 const test: TestType<any, any> = fixture.test;
 
@@ -111,7 +119,7 @@ for (const feature of features) {
                     if (steps.length > 1) throw new Error(`Step '${pickleStep.text}' matches multiple step definitions`);
                     const [ step ] = steps;
                     const location = getLine(step);
-                    await test.step(pickleStep.text, async () => {
+                    await test.step(stepName(pickleStep), async () => {
                         for (const beforeStep of supportCodeLibrary.beforeTestStepHookDefinitions) {
                             if (beforeStep.appliesToTestCase(testCase)) {
                                 const location = getLine(beforeStep);
