@@ -16,13 +16,17 @@ import {
 import { test as base, expect as baseExpect, Page } from '@playwright/test';
 
 type Fixture = {
-    customFixture: number
+    customFixture: number,
+    optionalFixture?: number,
 }
 
 const fixture = base.extend<Fixture>({
     customFixture: async ({}, use) => {
         await use(42);
-    }
+    },
+    optionalFixture: async ({}, use, testInfo) => {
+        await use(testInfo.tags.includes('@tag') ? 42 : 1);
+    },
 });
 
 const customExpect = baseExpect.extend({
@@ -40,13 +44,15 @@ const customExpect = baseExpect.extend({
 class ExtendedPlaywrightWorld extends PlaywrightWorld {
     customFixture!: number;
     renamedCustomFixture!: number;
+    optionalFixture?: number;
     test = fixture;
     expect = customExpect;
 
-    init = ({ page, customFixture }: { page: Page, customFixture: number }) => {
+    init = ({ page, customFixture, optionalFixture }: { page: Page, customFixture: number, optionalFixture?: number }) => {
         this.page = page;
         this.customFixture = customFixture;
         this.renamedCustomFixture = customFixture;
+        this.optionalFixture = optionalFixture;
     }
 }
 
