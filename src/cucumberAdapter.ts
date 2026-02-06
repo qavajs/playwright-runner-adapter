@@ -1,6 +1,6 @@
-import { load } from './loader';
-import type { TestInfo, TestType } from '@playwright/test';
-import type { ITestCaseHookParameter, ITestStepHookParameter } from '@cucumber/cucumber';
+import {load} from './loader';
+import type {TestInfo, TestType} from '@playwright/test';
+import type {ITestCaseHookParameter, ITestStepHookParameter} from '@cucumber/cucumber';
 
 function getTestId(testInfo: TestInfo) {
     return testInfo
@@ -22,7 +22,7 @@ function getResult(testInfo: TestInfo) {
 }
 
 function getLine(step: { uri: string, line: number }) {
-    return { location: { column: 1, file: step.uri, line: step.line }}
+    return {location: {column: 1, file: step.uri, line: step.line}}
 }
 
 function log(data: any) {
@@ -32,7 +32,7 @@ function log(data: any) {
 function attach(this: { test: any }, body: any, details: any) {
     const fileName = details?.fileName ?? 'attachment';
     const contentType = details?.mediaType ?? 'text/plain';
-    this.test.info().attach(fileName, { body, contentType });
+    this.test.info().attach(fileName, {body, contentType});
 }
 
 function stepName(pickleStep: any) {
@@ -43,10 +43,16 @@ function stepName(pickleStep: any) {
     return step;
 }
 
-export function defineConfig(config: any): any {
-    const { features, supportCodeLibrary } = load(config);
+function setLocation(location: { file: string; line: number; column: number }) {
+    Error.captureStackTrace = function (o: any) {
+        o.stack = location;
+    }
+}
 
-    const fixture = new supportCodeLibrary.World({ config });
+export function defineConfig(config: any): any {
+    const {features, supportCodeLibrary} = load(config);
+
+    const fixture = new supportCodeLibrary.World({config});
     const test: TestType<any, any> = fixture.test;
 
     test.beforeAll(async () => {
@@ -62,10 +68,19 @@ export function defineConfig(config: any): any {
 
     const worlds = new Map();
 
-    for (const feature of features) {
-        const tests = feature.tests;
-        test.describe(feature.feature as string, async () => {
+    // set patch to override test location
+    const origCaptureStackTrace = Error.captureStackTrace;
 
+    for (const feature of features) {
+        setLocation({
+            file: feature.uri,
+            line: 1,
+            column: 0,
+        });
+
+        const tests = feature.tests;
+
+        test.describe(feature.feature as string, async () => {
             const worldFactory = (fixtures: any) => {
                 const world = new supportCodeLibrary.World({
                     log,
@@ -76,7 +91,8 @@ export function defineConfig(config: any): any {
                 world.init(fixtures);
                 worlds.set(getTestId(test.info()), world);
             };
-            worldFactory.toString = () => { return fixture.init.toString() }
+
+            worldFactory.toString = () => fixture.init.toString();
 
             test.beforeEach('World', worldFactory);
 
@@ -103,14 +119,21 @@ export function defineConfig(config: any): any {
             for (const testCase of tests) {
                 const tag = [...new Set(testCase.tags.map((tag: { name: string }) => tag.name))];
                 const annotation = [
-                    { type: 'name', description: testCase.name },
-                    { type: 'uri', description: testCase.uri },
-                    { type: 'testId', description: testCase.id },
-                    { type: 'tags', description: JSON.stringify(tag) }
+                    {type: 'name', description: testCase.name},
+                    {type: 'uri', description: testCase.uri},
+                    {type: 'testId', description: testCase.id},
+                    {type: 'tags', description: JSON.stringify(tag)}
                 ];
-                test(testCase.name, { tag, annotation }, async () => {
+
+                setLocation({
+                    file: testCase.uri,
+                    line: testCase.location?.line ?? 0,
+                    column: testCase.location?.column ?? 0,
+                });
+
+                test(testCase.name, {tag, annotation}, async () => {
                     const world = worlds.get(testCase.id);
-                    const result: { status: string, error?: Error } = { status: 'passed' };
+                    const result: { status: string, error?: Error } = {status: 'passed'};
                     for (const pickleStep of testCase.steps) {
                         if (result.status !== 'passed') {
                             break;
@@ -119,7 +142,7 @@ export function defineConfig(config: any): any {
                             .filter(stepDefinition => stepDefinition.matchesStepName(pickleStep.text));
                         if (steps.length === 0) throw new Error(`Step '${pickleStep.text}' is not defined`);
                         if (steps.length > 1) throw new Error(`Step '${pickleStep.text}' matches multiple step definitions`);
-                        const [ step ] = steps;
+                        const [step] = steps;
                         const location = getLine(step);
                         await test.step(stepName(pickleStep), async () => {
                             for (const beforeStep of supportCodeLibrary.beforeTestStepHookDefinitions) {
@@ -136,7 +159,7 @@ export function defineConfig(config: any): any {
                                     );
                                 }
                             }
-                            const { parameters } = await step.getInvocationParameters({
+                            const {parameters} = await step.getInvocationParameters({
                                 step: {
                                     text: pickleStep.text,
                                     argument: pickleStep.argument
@@ -208,6 +231,9 @@ export function defineConfig(config: any): any {
 
         });
     }
+
+    // reset captureStackTrace
+    Error.captureStackTrace = origCaptureStackTrace;
 
     test.afterAll(async () => {
         for (const afterAllHook of supportCodeLibrary.afterTestRunHookDefinitions) {

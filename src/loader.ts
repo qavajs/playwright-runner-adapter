@@ -31,6 +31,7 @@ type Feature = {
     feature?: string;
     gherkinDocument: GherkinDocument;
     tests: readonly Pickle[];
+    uri: string;
 }
 
 export function loadFeatures(globPattern: string[]): Feature[] {
@@ -40,6 +41,7 @@ export function loadFeatures(globPattern: string[]): Feature[] {
         const gherkinDocument = parser.parse(readFileSync(filePath, 'utf-8'));
         return {
             feature: gherkinDocument.feature?.name,
+            uri: filePath,
             gherkinDocument,
             tests: duplicates(compile(gherkinDocument, file, uuidFn))
         }
