@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { AstBuilder, compile, GherkinClassicTokenMatcher, Parser } from '@cucumber/gherkin';
 import { supportCodeLibraryBuilder } from '@cucumber/cucumber';
@@ -57,16 +57,12 @@ export function loadStepDefinitions(globPattern: string[]) {
     return supportCodeLibraryBuilder.finalize();
 }
 
-export function load() {
-    const config = require(join(process.cwd(), process.env.CONFIG ?? 'config.js'));
-    const profile = process.env.PROFILE ?? 'default';
-
-    const resolvedConfig = config[profile];
-    const features = loadFeatures(resolvedConfig.paths);
+export function load(config: any) {
+    const features = loadFeatures(config.paths);
     const supportCodeLibrary = loadStepDefinitions([
-        ...(resolvedConfig.requireModules ?? []),
-        ...(resolvedConfig.require ?? []),
-        ...(resolvedConfig.import ?? [])
+        ...(config.requireModules ?? []),
+        ...(config.require ?? []),
+        ...(config.import ?? [])
     ]);
     return { features, supportCodeLibrary }
 }

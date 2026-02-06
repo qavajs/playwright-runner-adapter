@@ -14,21 +14,21 @@ npm install @qavajs/playwright-runner-adapter
 ### Create cucumber config file
 Set `paths` and `require` properties
 ```typescript
-export default {
-    paths: ['test/features/*.feature'],
-    require: ['test/step_definitions/*.ts']
-}
-```
-### Set testDir
-Set testDir to adapter
-```typescript
-import { defineCucumber } from '@qavajs/playwright-runner-adapter';
+// cucumber.config.ts
+import { defineConfig } from '@qavajs/playwright-runner-adapter';
 
 export default defineConfig({
-    testDir: defineCucumber({
-        config: 'test/cucumber.ts',
-        profile: 'default'
-    })
+    paths: ['test/features/*.feature'],
+    require: ['test/step_definitions/*.ts']
+})
+```
+### Set testMatch property
+Set `testMatch` to adapter
+```typescript
+import { defineConfig } from '@playwright/test';
+
+export default defineConfig({
+    testMatch: 'cucumber.config.ts'
 });
 ```
 

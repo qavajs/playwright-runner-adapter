@@ -1,15 +1,11 @@
 import { defineConfig, devices } from '@playwright/test';
-import { defineCucumber, tags } from '../src';
+import { tags } from '../src';
 
 /**
  * See https://playwright.dev/docs/test-configuration.
  */
 export default defineConfig({
-    testDir: defineCucumber({
-        config: 'test/cucumber.ts',
-        profile: 'default',
-        adapter: '../src'
-    }),
+    testMatch: 'cucumber.config.ts',
     /* Retry on CI only */
     retries: 2,
     /* Opt out of parallel tests on CI. */
@@ -32,6 +28,7 @@ export default defineConfig({
     projects: [
         {
             name: 'test',
+            testMatch: 'test.config.ts',
             use: {
                 ...devices['Desktop Chrome'],
                 hasTouch: true

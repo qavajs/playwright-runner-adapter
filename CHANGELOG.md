@@ -14,6 +14,31 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 :microscope: - experimental
 
+## [2.0.0]
+Breaking Change:
+- :rocket: reworked cucumber-playwright connection mechanism
+
+#### Create cucumber config file
+Set `paths` and `require` properties
+```typescript
+// cucumber.config.ts
+import { defineConfig } from '@qavajs/playwright-runner-adapter';
+
+export default defineConfig({
+    paths: ['test/features/*.feature'],
+    require: ['test/step_definitions/*.ts']
+})
+```
+#### Set testMatch property
+Set `testMatch` to adapter
+```typescript
+import { defineConfig } from '@playwright/test';
+
+export default defineConfig({
+    testMatch: 'cucumber.config.ts'
+});
+```
+
 ## [1.10.0]
 - :rocket: improved multi line and data table step logging
 
