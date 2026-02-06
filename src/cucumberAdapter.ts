@@ -70,7 +70,8 @@ export function defineConfig(config: any): any {
                 const world = new supportCodeLibrary.World({
                     log,
                     attach,
-                    supportCodeLibrary
+                    supportCodeLibrary,
+                    config
                 });
                 world.init(fixtures);
                 worlds.set(getTestId(test.info()), world);
