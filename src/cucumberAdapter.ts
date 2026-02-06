@@ -46,7 +46,7 @@ function stepName(pickleStep: any) {
 export function defineConfig(config: any): any {
     const { features, supportCodeLibrary } = load(config);
 
-    const fixture = new supportCodeLibrary.World({});
+    const fixture = new supportCodeLibrary.World({ config });
     const test: TestType<any, any> = fixture.test;
 
     test.beforeAll(async () => {
