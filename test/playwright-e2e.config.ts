@@ -1,21 +1,10 @@
 import { defineConfig, devices } from '@playwright/test';
-import { defineCucumber } from '../src';
-
-/**
- * Read environment variables from file.
- * https://github.com/motdotla/dotenv
- */
-// require('dotenv').config();
 
 /**
  * See https://playwright.dev/docs/test-configuration.
  */
 export default defineConfig({
-    testDir: defineCucumber({
-        config: 'test/cucumber.ts',
-        profile: 'default',
-        adapter: '../adapter'
-    }),
+    testMatch: 'cucumber.config.ts',
     /* Run tests in files in parallel */
     fullyParallel: true,
     /* Fail the build on CI if you accidentally left test.only in the source code. */
