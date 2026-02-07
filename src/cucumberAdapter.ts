@@ -141,15 +141,6 @@ function stepName(pickleStep: {
 }
 
 /**
- * Overrides Error.captureStackTrace to set custom location for test registration
- */
-function setLocation(location: Location): void {
-    Error.captureStackTrace = function (target: Error): void {
-        (target as any).stack = location;
-    };
-}
-
-/**
  * Executes before all hooks
  */
 async function executeBeforeAllHooks(
@@ -212,16 +203,7 @@ export function defineConfig(config: any): any {
 
     const worlds = new Map<string, any>();
 
-    // Store original captureStackTrace to restore later
-    const origCaptureStackTrace = Error.captureStackTrace;
-
     for (const feature of features) {
-        setLocation({
-            file: feature.uri,
-            line: 1,
-            column: 0,
-        });
-
         const tests = feature.tests;
 
         test.describe(feature.feature as string, async () => {
@@ -271,12 +253,6 @@ export function defineConfig(config: any): any {
             for (const testCase of tests) {
                 const tag = [...new Set(testCase.tags.map((tag: { name: string }) => tag.name))];
                 const annotation = createTestAnnotations(testCase);
-
-                setLocation({
-                    file: testCase.uri,
-                    line: testCase.location?.line ?? 0,
-                    column: testCase.location?.column ?? 0,
-                });
 
                 test(testCase.name, {tag, annotation}, async () => {
                     const world = worlds.get(testCase.id);
@@ -397,9 +373,6 @@ export function defineConfig(config: any): any {
 
         });
     }
-
-    // Restore original captureStackTrace
-    Error.captureStackTrace = origCaptureStackTrace;
 
     test.afterAll(async () => {
         await executeAfterAllHooks(test, supportCodeLibrary.afterTestRunHookDefinitions);

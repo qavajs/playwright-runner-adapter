@@ -14,6 +14,9 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 :microscope: - experimental
 
+## [2.0.1]
+- :beetle: removed stacktrace override to proper location calculation
+
 ## [2.0.0]
 Breaking Change:
 - :rocket: reworked cucumber-playwright connection mechanism
