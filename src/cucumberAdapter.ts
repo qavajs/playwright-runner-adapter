@@ -56,7 +56,7 @@ interface HookResult {
     duration: number | { nanos: number; seconds: number };
     message?: string;
     status: string;
-    exception?: Error | any;
+    exception?: Error;
 }
 
 /**
