@@ -2,53 +2,204 @@ import {load} from './loader';
 import type {TestInfo, TestType} from '@playwright/test';
 import type {ITestCaseHookParameter, ITestStepHookParameter} from '@cucumber/cucumber';
 
-function getTestId(testInfo: TestInfo) {
-    return testInfo
-        .annotations
-        .find((annotation: { type: string }) => annotation.type === 'testId')!
-        .description;
+// Constants
+const ANNOTATION_TYPES = {
+    TEST_ID: 'testId',
+    NAME: 'name',
+    URI: 'uri',
+    TAGS: 'tags'
+} as const;
+
+const HOOK_NAMES = {
+    BEFORE_ALL: 'Before All',
+    AFTER_ALL: 'After All',
+    BEFORE: 'Before',
+    AFTER: 'After',
+    BEFORE_STEP: 'Before Step',
+    AFTER_STEP: 'After Step',
+    WORLD: 'World',
+    BEFORE_HOOKS: 'Before Hooks',
+    AFTER_HOOKS: 'After Hooks'
+} as const;
+
+const DEFAULT_VALUES = {
+    ATTACHMENT_FILENAME: 'attachment',
+    CONTENT_TYPE: 'text/plain',
+    COLUMN: 1,
+    TEST_CASE_ID: '0',
+    TEST_STEP_ID: '0'
+} as const;
+
+const STEP_ARGUMENT_LABELS = {
+    DOC_STRING: ' [MultiLine]',
+    DATA_TABLE: ' [DataTable]'
+} as const;
+
+// Type definitions
+interface Location {
+    file: string;
+    line: number;
+    column: number;
 }
 
-function getResult(testInfo: TestInfo) {
+interface StepDefinition {
+    uri: string;
+    line: number;
+}
+
+interface TestResult {
+    status: string;
+    error?: Error;
+}
+
+interface HookResult {
+    duration: number | { nanos: number; seconds: number };
+    message?: string;
+    status: string;
+    exception?: Error | any;
+}
+
+/**
+ * Extracts the test ID from TestInfo annotations
+ */
+function getTestId(testInfo: TestInfo): string {
+    const annotation = testInfo.annotations
+        .find((annotation) => annotation.type === ANNOTATION_TYPES.TEST_ID);
+    
+    if (!annotation?.description) {
+        throw new Error('Test ID annotation not found');
+    }
+    
+    return annotation.description;
+}
+
+/**
+ * Converts TestInfo to HookResult format
+ */
+function getResult(testInfo: TestInfo): HookResult {
     const message = testInfo.errors.length > 0
-        ? testInfo.errors.map((err: any) => err.message).join('\n')
+        ? testInfo.errors.map((err) => err.message).join('\n')
         : undefined;
+    
     return {
-        duration: testInfo.duration as any,
+        duration: testInfo.duration,
         message,
-        status: testInfo.status?.toUpperCase(),
-        exception: testInfo.error
+        status: testInfo.status?.toUpperCase() ?? 'UNKNOWN',
+        exception: testInfo.error as any
     };
 }
 
-function getLine(step: { uri: string, line: number }) {
-    return {location: {column: 1, file: step.uri, line: step.line}}
+/**
+ * Creates a location object from step definition
+ */
+function getLine(step: StepDefinition): { location: Location } {
+    return {
+        location: {
+            column: DEFAULT_VALUES.COLUMN,
+            file: step.uri,
+            line: step.line
+        }
+    };
 }
 
-function log(data: any) {
+/**
+ * Logs data to console
+ */
+function log(data: unknown): void {
     console.log(data);
 }
 
-function attach(this: { test: any }, body: any, details: any) {
-    const fileName = details?.fileName ?? 'attachment';
-    const contentType = details?.mediaType ?? 'text/plain';
-    this.test.info().attach(fileName, {body, contentType});
+/**
+ * Attaches content to test report
+ */
+function attach(
+    this: { test: { info: () => TestInfo } },
+    body: string | Buffer,
+    details?: { fileName?: string; mediaType?: string }
+): void {
+    const fileName = details?.fileName ?? DEFAULT_VALUES.ATTACHMENT_FILENAME;
+    const contentType = details?.mediaType ?? DEFAULT_VALUES.CONTENT_TYPE;
+    this.test.info().attach(fileName, { body, contentType });
 }
 
-function stepName(pickleStep: any) {
+/**
+ * Generates a human-readable step name with argument type indicator
+ */
+function stepName(pickleStep: {
+    text: string;
+    argument?: { docString?: unknown }
+}): string {
     let step = pickleStep.text;
+    
     if (pickleStep.argument) {
-        step += pickleStep.argument.docString ? ' [MultiLine]' : ' [DataTable]';
+        step += pickleStep.argument.docString
+            ? STEP_ARGUMENT_LABELS.DOC_STRING
+            : STEP_ARGUMENT_LABELS.DATA_TABLE;
     }
+    
     return step;
 }
 
-function setLocation(location: { file: string; line: number; column: number }) {
-    Error.captureStackTrace = function (o: any) {
-        o.stack = location;
+/**
+ * Overrides Error.captureStackTrace to set custom location for test registration
+ */
+function setLocation(location: Location): void {
+    Error.captureStackTrace = function (target: Error): void {
+        (target as any).stack = location;
+    };
+}
+
+/**
+ * Executes before all hooks
+ */
+async function executeBeforeAllHooks(
+    test: TestType<any, any>,
+    hooks: any[]
+): Promise<void> {
+    for (const hook of hooks) {
+        const location = getLine(hook);
+        await test.step(
+            HOOK_NAMES.BEFORE_ALL,
+            () => hook.code.apply({}),
+            location
+        );
     }
 }
 
+/**
+ * Executes after all hooks
+ */
+async function executeAfterAllHooks(
+    test: TestType<any, any>,
+    hooks: any[]
+): Promise<void> {
+    for (const hook of hooks) {
+        const location = getLine(hook);
+        await test.step(
+            HOOK_NAMES.AFTER_ALL,
+            () => hook.code.apply({}),
+            location
+        );
+    }
+}
+
+/**
+ * Creates test annotations from test case data
+ */
+function createTestAnnotations(testCase: any): any[] {
+    const tags = [...new Set(testCase.tags.map((tag: { name: string }) => tag.name))];
+    
+    return [
+        { type: ANNOTATION_TYPES.NAME, description: testCase.name },
+        { type: ANNOTATION_TYPES.URI, description: testCase.uri },
+        { type: ANNOTATION_TYPES.TEST_ID, description: testCase.id },
+        { type: ANNOTATION_TYPES.TAGS, description: JSON.stringify(tags) }
+    ];
+}
+
+/**
+ * Main configuration function that sets up Cucumber adapter for Playwright
+ */
 export function defineConfig(config: any): any {
     const {features, supportCodeLibrary} = load(config);
 
@@ -56,19 +207,12 @@ export function defineConfig(config: any): any {
     const test: TestType<any, any> = fixture.test;
 
     test.beforeAll(async () => {
-        for (const beforeAllHook of supportCodeLibrary.beforeTestRunHookDefinitions) {
-            const location = getLine(beforeAllHook);
-            await test.step(
-                'Before All',
-                () => beforeAllHook.code.apply({}),
-                location
-            )
-        }
+        await executeBeforeAllHooks(test, supportCodeLibrary.beforeTestRunHookDefinitions);
     });
 
-    const worlds = new Map();
+    const worlds = new Map<string, any>();
 
-    // set patch to override test location
+    // Store original captureStackTrace to restore later
     const origCaptureStackTrace = Error.captureStackTrace;
 
     for (const feature of features) {
@@ -81,7 +225,10 @@ export function defineConfig(config: any): any {
         const tests = feature.tests;
 
         test.describe(feature.feature as string, async () => {
-            const worldFactory = (fixtures: any) => {
+            /**
+             * Factory function to create and register world instances
+             */
+            const worldFactory = (fixtures: any): void => {
                 const world = new supportCodeLibrary.World({
                     log,
                     attach,
@@ -92,17 +239,22 @@ export function defineConfig(config: any): any {
                 worlds.set(getTestId(test.info()), world);
             };
 
-            worldFactory.toString = () => fixture.init.toString();
+            worldFactory.toString = (): string => fixture.init.toString();
 
-            test.beforeEach('World', worldFactory);
+            test.beforeEach(HOOK_NAMES.WORLD, worldFactory);
 
-            test.beforeEach('Before Hooks', async () => {
+            test.beforeEach(HOOK_NAMES.BEFORE_HOOKS, async () => {
                 const testId = getTestId(test.info());
                 const world = worlds.get(testId);
-                const testCase = tests.find(test => test.id === testId)!;
+                const testCase = tests.find((t: any) => t.id === testId);
+                
+                if (!testCase) {
+                    throw new Error(`Test case with ID ${testId} not found`);
+                }
+                
                 for (const beforeHook of supportCodeLibrary.beforeTestCaseHookDefinitions) {
                     if (beforeHook.appliesToTestCase(testCase)) {
-                        const hookName = beforeHook.name ?? 'Before';
+                        const hookName = beforeHook.name ?? HOOK_NAMES.BEFORE;
                         const location = getLine(beforeHook);
                         await test.step(
                             hookName,
@@ -118,12 +270,7 @@ export function defineConfig(config: any): any {
 
             for (const testCase of tests) {
                 const tag = [...new Set(testCase.tags.map((tag: { name: string }) => tag.name))];
-                const annotation = [
-                    {type: 'name', description: testCase.name},
-                    {type: 'uri', description: testCase.uri},
-                    {type: 'testId', description: testCase.id},
-                    {type: 'tags', description: JSON.stringify(tag)}
-                ];
+                const annotation = createTestAnnotations(testCase);
 
                 setLocation({
                     file: testCase.uri,
@@ -133,23 +280,36 @@ export function defineConfig(config: any): any {
 
                 test(testCase.name, {tag, annotation}, async () => {
                     const world = worlds.get(testCase.id);
-                    const result: { status: string, error?: Error } = {status: 'passed'};
+                    const result: TestResult = { status: 'passed' };
+                    
                     for (const pickleStep of testCase.steps) {
                         if (result.status !== 'passed') {
                             break;
                         }
-                        const steps = supportCodeLibrary.stepDefinitions
-                            .filter(stepDefinition => stepDefinition.matchesStepName(pickleStep.text));
-                        if (steps.length === 0) throw new Error(`Step '${pickleStep.text}' is not defined`);
-                        if (steps.length > 1) throw new Error(`Step '${pickleStep.text}' matches multiple step definitions`);
-                        const [step] = steps;
+                        
+                        const matchingSteps = supportCodeLibrary.stepDefinitions
+                            .filter((stepDef: any) => stepDef.matchesStepName(pickleStep.text));
+                        
+                        if (matchingSteps.length === 0) {
+                            throw new Error(
+                                `Step definition not found for: "${pickleStep.text}"`
+                            );
+                        }
+                        
+                        if (matchingSteps.length > 1) {
+                            throw new Error(
+                                `Ambiguous step "${pickleStep.text}" matches ${matchingSteps.length} definitions`
+                            );
+                        }
+                        
+                        const [step] = matchingSteps;
                         const location = getLine(step);
                         await test.step(stepName(pickleStep), async () => {
                             for (const beforeStep of supportCodeLibrary.beforeTestStepHookDefinitions) {
                                 if (beforeStep.appliesToTestCase(testCase)) {
                                     const location = getLine(beforeStep);
                                     await test.step(
-                                        'Before Step',
+                                        HOOK_NAMES.BEFORE_STEP,
                                         () => beforeStep.code.apply(world, [{
                                             gherkinDocument: feature.gherkinDocument,
                                             pickle: testCase,
@@ -166,22 +326,23 @@ export function defineConfig(config: any): any {
                                 },
                                 world
                             } as any);
+                            
                             try {
                                 await step.code.apply(world, parameters);
-                            } catch (err: any) {
+                            } catch (err) {
                                 result.status = 'failed';
-                                result.error = err;
+                                result.error = err as Error;
                                 throw err;
                             } finally {
                                 for (const afterStep of supportCodeLibrary.afterTestStepHookDefinitions) {
                                     if (afterStep.appliesToTestCase(testCase)) {
                                         const location = getLine(afterStep);
                                         await test.step(
-                                            'After Step',
+                                            HOOK_NAMES.AFTER_STEP,
                                             () => afterStep.code.apply(world, [{
                                                 gherkinDocument: feature.gherkinDocument,
-                                                testCaseStartedId: '0',
-                                                testStepId: '0',
+                                                testCaseStartedId: DEFAULT_VALUES.TEST_CASE_ID,
+                                                testStepId: DEFAULT_VALUES.TEST_STEP_ID,
                                                 pickle: testCase,
                                                 pickleStep,
                                                 result: {
@@ -190,7 +351,7 @@ export function defineConfig(config: any): any {
                                                     status: result.status.toUpperCase(),
                                                     exception: result.error
                                                 }
-                                            } as ITestStepHookParameter]),
+                                            } as any]),
                                             location
                                         );
                                     }
@@ -201,30 +362,35 @@ export function defineConfig(config: any): any {
                 })
             }
 
-            test.afterEach('After Hooks', async () => {
+            test.afterEach(HOOK_NAMES.AFTER_HOOKS, async () => {
                 const testInfo = test.info();
                 const testId = getTestId(testInfo);
                 const world = worlds.get(testId);
-                const testCase = tests.find(test => test.id === testId)!;
+                const testCase = tests.find((t) => t.id === testId);
+                
+                if (!testCase) {
+                    throw new Error(`Test case with ID ${testId} not found`);
+                }
+                
                 for (const afterHook of supportCodeLibrary.afterTestCaseHookDefinitions) {
                     if (afterHook.appliesToTestCase(testCase)) {
-                        const hookName = afterHook.name ?? 'After';
+                        const hookName = afterHook.name ?? HOOK_NAMES.AFTER;
                         const location = getLine(afterHook);
                         await test.step(
                             hookName,
                             () => afterHook.code.apply(world, [{
                                 gherkinDocument: feature.gherkinDocument,
-                                testCaseStartedId: '0',
+                                testCaseStartedId: DEFAULT_VALUES.TEST_CASE_ID,
                                 pickle: testCase,
                                 result: getResult(testInfo)
-                            } as ITestCaseHookParameter]),
+                            } as any]),
                             location
                         );
                     }
                 }
             });
 
-            test.afterEach('World', async () => {
+            test.afterEach(HOOK_NAMES.WORLD, async () => {
                 const testId = getTestId(test.info());
                 worlds.delete(testId);
             });
@@ -232,17 +398,10 @@ export function defineConfig(config: any): any {
         });
     }
 
-    // reset captureStackTrace
+    // Restore original captureStackTrace
     Error.captureStackTrace = origCaptureStackTrace;
 
     test.afterAll(async () => {
-        for (const afterAllHook of supportCodeLibrary.afterTestRunHookDefinitions) {
-            const location = getLine(afterAllHook);
-            await test.step(
-                'After All',
-                () => afterAllHook.code.apply({}),
-                location
-            )
-        }
+        await executeAfterAllHooks(test, supportCodeLibrary.afterTestRunHookDefinitions);
     });
 }
