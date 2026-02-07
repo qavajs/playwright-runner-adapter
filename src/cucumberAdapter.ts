@@ -1,6 +1,6 @@
 import {load} from './loader';
 import type {TestInfo, TestType} from '@playwright/test';
-import type {ITestCaseHookParameter, ITestStepHookParameter} from '@cucumber/cucumber';
+import type {ITestCaseHookParameter} from '@cucumber/cucumber';
 
 // Constants
 const ANNOTATION_TYPES = {
