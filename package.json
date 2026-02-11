@@ -1,6 +1,6 @@
 {
   "name": "@qavajs/playwright-runner-adapter",
-  "version": "2.0.1",
+  "version": "2.1.0",
   "description": "adapter for playwright test runner",
   "main": "adapter/index.js",
   "types": "adapter/index.d.ts",
