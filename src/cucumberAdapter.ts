@@ -143,35 +143,41 @@ function stepName(pickleStep: {
 /**
  * Executes before all hooks
  */
-async function executeBeforeAllHooks(
+function executeBeforeAllHooks(
     test: TestType<any, any>,
     hooks: any[]
-): Promise<void> {
-    for (const hook of hooks) {
-        const location = getLine(hook);
-        await test.step(
-            HOOK_NAMES.BEFORE_ALL,
-            () => hook.code.apply({}),
-            location
-        );
-    }
+): void {
+    if (hooks.length === 0) return;
+    test.beforeAll(async () => {
+        for (const hook of hooks) {
+            const location = getLine(hook);
+            await test.step(
+                HOOK_NAMES.BEFORE_ALL,
+                () => hook.code.apply({}),
+                location
+            );
+        }
+    })
 }
 
 /**
  * Executes after all hooks
  */
-async function executeAfterAllHooks(
+function executeAfterAllHooks(
     test: TestType<any, any>,
     hooks: any[]
-): Promise<void> {
-    for (const hook of hooks) {
-        const location = getLine(hook);
-        await test.step(
-            HOOK_NAMES.AFTER_ALL,
-            () => hook.code.apply({}),
-            location
-        );
-    }
+): void {
+    if (hooks.length === 0) return;
+    test.afterAll(async () => {
+        for (const hook of hooks) {
+            const location = getLine(hook);
+            await test.step(
+                HOOK_NAMES.AFTER_ALL,
+                () => hook.code.apply({}),
+                location
+            );
+        }
+    });
 }
 
 /**
@@ -197,9 +203,7 @@ export function defineConfig(config: any): any {
     const fixture = new supportCodeLibrary.World({config});
     const test: TestType<any, any> = fixture.test;
 
-    test.beforeAll(async () => {
-        await executeBeforeAllHooks(test, supportCodeLibrary.beforeTestRunHookDefinitions);
-    });
+    executeBeforeAllHooks(test, supportCodeLibrary.beforeTestRunHookDefinitions);
 
     const worlds = new Map<string, any>();
 
@@ -374,7 +378,5 @@ export function defineConfig(config: any): any {
         });
     }
 
-    test.afterAll(async () => {
-        await executeAfterAllHooks(test, supportCodeLibrary.afterTestRunHookDefinitions);
-    });
+    executeAfterAllHooks(test, supportCodeLibrary.afterTestRunHookDefinitions);
 }

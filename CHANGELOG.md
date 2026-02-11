@@ -14,6 +14,9 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 :microscope: - experimental
 
+## [2.1.0]
+- :rocket: made declaration of beforeAll/afterAll hooks optional to enable pure parallelism
+
 ## [2.0.1]
 - :beetle: removed stacktrace override to proper location calculation
 
