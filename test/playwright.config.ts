@@ -27,8 +27,24 @@ export default defineConfig({
     /* Configure projects for major browsers */
     projects: [
         {
-            name: 'test',
-            testMatch: 'test.config.ts',
+            name: 'adapterTS',
+            testMatch: 'adapterTS.config.ts',
+            use: {
+                ...devices['Desktop Chrome'],
+                hasTouch: true
+            },
+        },
+        {
+            name: 'adapterCJS',
+            testMatch: 'adapterCJS.config.js',
+            use: {
+                ...devices['Desktop Chrome'],
+                hasTouch: true
+            },
+        },
+        {
+            name: 'adapterMJS',
+            testMatch: 'adapterMJS.config.js',
             use: {
                 ...devices['Desktop Chrome'],
                 hasTouch: true
