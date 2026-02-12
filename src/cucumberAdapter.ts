@@ -4,7 +4,7 @@ import type {ITestCaseHookParameter} from '@cucumber/cucumber';
 
 // Constants
 const ANNOTATION_TYPES = {
-    TEST_ID: 'testId',
+    TEST_ID: '_testId',
     NAME: 'name',
     URI: 'uri',
     TAGS: 'tags'
@@ -116,10 +116,10 @@ function attach(
     this: { test: { info: () => TestInfo } },
     body: string | Buffer,
     details?: { fileName?: string; mediaType?: string }
-): void {
+): Promise<void> {
     const fileName = details?.fileName ?? DEFAULT_VALUES.ATTACHMENT_FILENAME;
     const contentType = details?.mediaType ?? DEFAULT_VALUES.CONTENT_TYPE;
-    this.test.info().attach(fileName, { body, contentType });
+    return this.test.info().attach(fileName, { body, contentType });
 }
 
 /**
@@ -189,8 +189,8 @@ function createTestAnnotations(testCase: any): any[] {
     return [
         { type: ANNOTATION_TYPES.NAME, description: testCase.name },
         { type: ANNOTATION_TYPES.URI, description: testCase.uri },
-        { type: ANNOTATION_TYPES.TEST_ID, description: testCase.id },
-        { type: ANNOTATION_TYPES.TAGS, description: JSON.stringify(tags) }
+        { type: ANNOTATION_TYPES.TAGS, description: JSON.stringify(tags) },
+        { type: ANNOTATION_TYPES.TEST_ID, description: testCase.id }
     ];
 }
 
@@ -202,7 +202,6 @@ export function defineConfig(config: any): any {
 
     const fixture = new supportCodeLibrary.World({config});
     const test: TestType<any, any> = fixture.test;
-
     executeBeforeAllHooks(test, supportCodeLibrary.beforeTestRunHookDefinitions);
 
     const worlds = new Map<string, any>();
