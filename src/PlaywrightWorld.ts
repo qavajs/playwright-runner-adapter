@@ -5,7 +5,7 @@ import { APIRequestContext, Browser, BrowserContext, Page, test, expect } from '
  */
 export class TestWorld {
     log!: (data: any) => void;
-    attach!: (data: any, details?: { fileName?: string, mediaType: string }) => void;
+    attach!: (data: any, details?: { fileName?: string, mediaType: string }) => Promise<void>;
     parameters!: string;
     config: any;
     supportCodeLibrary!: any;
