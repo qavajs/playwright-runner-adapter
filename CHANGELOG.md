@@ -14,6 +14,10 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 :microscope: - experimental
 
+## [2.2.0]
+- :rocket: added `request` into default fixture import
+- :beetle: fixed `attach` method type
+
 ## [2.1.0]
 - :rocket: made declaration of beforeAll/afterAll hooks optional to enable pure parallelism
 

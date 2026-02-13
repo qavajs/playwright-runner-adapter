@@ -43,9 +43,10 @@ export class PlaywrightWorld extends TestWorld {
     browserName!: string;
     request!: APIRequestContext;
 
-    init: ({ [fixture: string]: any }) = ({ browser, context, page }: { browser: Browser, context: BrowserContext, page: Page }) => {
+    init: ({ [fixture: string]: any }) = ({ browser, context, page, request }: { browser: Browser, context: BrowserContext, page: Page, request: APIRequestContext }) => {
         this.browser = browser;
         this.context = context;
         this.page = page;
+        this.request = request;
     }
 }
