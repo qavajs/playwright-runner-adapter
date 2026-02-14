@@ -1,10 +1,9 @@
 import {load} from './loader';
 import type {TestInfo, TestType} from '@playwright/test';
-import type {ITestCaseHookParameter} from '@cucumber/cucumber';
+import type {ITestCaseHookParameter, ITestStepHookParameter} from '@cucumber/cucumber';
 
 // Constants
 const ANNOTATION_TYPES = {
-    TEST_ID: '_testId',
     NAME: 'name',
     URI: 'uri',
     TAGS: 'tags'
@@ -57,36 +56,6 @@ interface HookResult {
     message?: string;
     status: string;
     exception?: Error;
-}
-
-/**
- * Extracts the test ID from TestInfo annotations
- */
-function getTestId(testInfo: TestInfo): string {
-    const annotation = testInfo.annotations
-        .find((annotation) => annotation.type === ANNOTATION_TYPES.TEST_ID);
-    
-    if (!annotation?.description) {
-        throw new Error('Test ID annotation not found');
-    }
-    
-    return annotation.description;
-}
-
-/**
- * Converts TestInfo to HookResult format
- */
-function getResult(testInfo: TestInfo): HookResult {
-    const message = testInfo.errors.length > 0
-        ? testInfo.errors.map((err) => err.message).join('\n')
-        : undefined;
-    
-    return {
-        duration: testInfo.duration,
-        message,
-        status: testInfo.status?.toUpperCase() ?? 'UNKNOWN',
-        exception: testInfo.error as any
-    };
 }
 
 /**
@@ -181,20 +150,6 @@ function executeAfterAllHooks(
 }
 
 /**
- * Creates test annotations from test case data
- */
-function createTestAnnotations(testCase: any): any[] {
-    const tags = [...new Set(testCase.tags.map((tag: { name: string }) => tag.name))];
-    
-    return [
-        { type: ANNOTATION_TYPES.NAME, description: testCase.name },
-        { type: ANNOTATION_TYPES.URI, description: testCase.uri },
-        { type: ANNOTATION_TYPES.TAGS, description: JSON.stringify(tags) },
-        { type: ANNOTATION_TYPES.TEST_ID, description: testCase.id }
-    ];
-}
-
-/**
  * Main configuration function that sets up Cucumber adapter for Playwright
  */
 export function defineConfig(config: any): any {
@@ -208,171 +163,137 @@ export function defineConfig(config: any): any {
 
     for (const feature of features) {
         const tests = feature.tests;
-
-        test.describe(feature.feature as string, async () => {
-            /**
-             * Factory function to create and register world instances
-             */
-            const worldFactory = (fixtures: any): void => {
-                const world = new supportCodeLibrary.World({
-                    log,
-                    attach,
-                    supportCodeLibrary,
-                    config
-                });
-                world.init(fixtures);
-                worlds.set(getTestId(test.info()), world);
-            };
-
-            worldFactory.toString = (): string => fixture.init.toString();
-
-            test.beforeEach(HOOK_NAMES.WORLD, worldFactory);
-
-            test.beforeEach(HOOK_NAMES.BEFORE_HOOKS, async () => {
-                const testId = getTestId(test.info());
-                const world = worlds.get(testId);
-                const testCase = tests.find((t: any) => t.id === testId);
-                
-                if (!testCase) {
-                    throw new Error(`Test case with ID ${testId} not found`);
-                }
-                
-                for (const beforeHook of supportCodeLibrary.beforeTestCaseHookDefinitions) {
-                    if (beforeHook.appliesToTestCase(testCase)) {
-                        const hookName = beforeHook.name ?? HOOK_NAMES.BEFORE;
-                        const location = getLine(beforeHook);
-                        await test.step(
-                            hookName,
-                            () => beforeHook.code.apply(world, [{
-                                gherkinDocument: feature.gherkinDocument,
-                                pickle: testCase
-                            } as ITestCaseHookParameter]),
-                            location
-                        );
-                    }
-                }
-            });
+        test.describe(feature.feature as string, () => {
 
             for (const testCase of tests) {
                 const tag = [...new Set(testCase.tags.map((tag: { name: string }) => tag.name))];
-                const annotation = createTestAnnotations(testCase);
+                const annotation = [
+                    {type: 'name', description: testCase.name},
+                    {type: 'uri', description: testCase.uri},
+                    {type: 'tags', description: JSON.stringify(tag)}
+                ];
+                const testBody = async (fixtures: any) => {
 
-                test(testCase.name, {tag, annotation}, async () => {
-                    const world = worlds.get(testCase.id);
-                    const result: TestResult = { status: 'passed' };
-                    
-                    for (const pickleStep of testCase.steps) {
-                        if (result.status !== 'passed') {
-                            break;
-                        }
-                        
-                        const matchingSteps = supportCodeLibrary.stepDefinitions
-                            .filter((stepDef: any) => stepDef.matchesStepName(pickleStep.text));
-                        
-                        if (matchingSteps.length === 0) {
-                            throw new Error(
-                                `Step definition not found for: "${pickleStep.text}"`
+                    const world = new supportCodeLibrary.World({
+                        log,
+                        attach,
+                        supportCodeLibrary
+                    });
+                    world.init(fixtures);
+
+                    const result: { status: string, error?: Error, start: number } = {
+                        status: 'passed',
+                        start: Date.now(),
+                    };
+
+                    for (const beforeHook of supportCodeLibrary.beforeTestCaseHookDefinitions) {
+                        if (beforeHook.appliesToTestCase(testCase)) {
+                            const hookName = beforeHook.name ?? 'Before';
+                            const location = getLine(beforeHook);
+                            await test.step(
+                                hookName,
+                                () => beforeHook.code.apply(world, [{
+                                    gherkinDocument: feature.gherkinDocument,
+                                    pickle: testCase
+                                } as ITestCaseHookParameter]),
+                                location
                             );
                         }
-                        
-                        if (matchingSteps.length > 1) {
-                            throw new Error(
-                                `Ambiguous step "${pickleStep.text}" matches ${matchingSteps.length} definitions`
-                            );
-                        }
-                        
-                        const [step] = matchingSteps;
-                        const location = getLine(step);
-                        await test.step(stepName(pickleStep), async () => {
-                            for (const beforeStep of supportCodeLibrary.beforeTestStepHookDefinitions) {
-                                if (beforeStep.appliesToTestCase(testCase)) {
-                                    const location = getLine(beforeStep);
-                                    await test.step(
-                                        HOOK_NAMES.BEFORE_STEP,
-                                        () => beforeStep.code.apply(world, [{
-                                            gherkinDocument: feature.gherkinDocument,
-                                            pickle: testCase,
-                                            pickleStep
-                                        }]),
-                                        location
-                                    );
-                                }
+                    }
+
+                    try {
+                        for (const pickleStep of testCase.steps) {
+                            if (result.status !== 'passed') {
+                                break;
                             }
-                            const {parameters} = await step.getInvocationParameters({
-                                step: {
-                                    text: pickleStep.text,
-                                    argument: pickleStep.argument
-                                },
-                                world
-                            } as any);
-                            
-                            try {
-                                await step.code.apply(world, parameters);
-                            } catch (err) {
-                                result.status = 'failed';
-                                result.error = err as Error;
-                                throw err;
-                            } finally {
-                                for (const afterStep of supportCodeLibrary.afterTestStepHookDefinitions) {
-                                    if (afterStep.appliesToTestCase(testCase)) {
-                                        const location = getLine(afterStep);
+                            const steps = supportCodeLibrary.stepDefinitions
+                                .filter(stepDefinition => stepDefinition.matchesStepName(pickleStep.text));
+                            if (steps.length === 0) throw new Error(`Step '${pickleStep.text}' is not defined`);
+                            if (steps.length > 1) throw new Error(`Step '${pickleStep.text}' matches multiple step definitions`);
+                            const [step] = steps;
+                            const location = getLine(step);
+                            await test.step(stepName(pickleStep), async () => {
+                                for (const beforeStep of supportCodeLibrary.beforeTestStepHookDefinitions) {
+                                    if (beforeStep.appliesToTestCase(testCase)) {
+                                        const location = getLine(beforeStep);
                                         await test.step(
-                                            HOOK_NAMES.AFTER_STEP,
-                                            () => afterStep.code.apply(world, [{
+                                            'Before Step',
+                                            () => beforeStep.code.apply(world, [{
                                                 gherkinDocument: feature.gherkinDocument,
-                                                testCaseStartedId: DEFAULT_VALUES.TEST_CASE_ID,
-                                                testStepId: DEFAULT_VALUES.TEST_STEP_ID,
                                                 pickle: testCase,
-                                                pickleStep,
-                                                result: {
-                                                    duration: 0 as any,
-                                                    message: result.error?.message,
-                                                    status: result.status.toUpperCase(),
-                                                    exception: result.error
-                                                }
-                                            } as any]),
+                                                pickleStep
+                                            }]),
                                             location
                                         );
                                     }
                                 }
+                                const {parameters} = await step.getInvocationParameters({
+                                    step: {
+                                        text: pickleStep.text,
+                                        argument: pickleStep.argument
+                                    },
+                                    world
+                                } as any);
+                                try {
+                                    await step.code.apply(world, parameters);
+                                } catch (err: any) {
+                                    result.status = 'failed';
+                                    result.error = err;
+                                    throw err;
+                                } finally {
+                                    for (const afterStep of supportCodeLibrary.afterTestStepHookDefinitions) {
+                                        if (afterStep.appliesToTestCase(testCase)) {
+                                            const location = getLine(afterStep);
+                                            await test.step(
+                                                'After Step',
+                                                () => afterStep.code.apply(world, [{
+                                                    gherkinDocument: feature.gherkinDocument,
+                                                    testCaseStartedId: '0',
+                                                    testStepId: '0',
+                                                    pickle: testCase,
+                                                    pickleStep,
+                                                    result: {
+                                                        duration: (Date.now() - result.start) as any,
+                                                        message: result.error?.message,
+                                                        status: result.status.toUpperCase(),
+                                                        exception: result.error
+                                                    }
+                                                } as ITestStepHookParameter]),
+                                                location
+                                            );
+                                        }
+                                    }
+                                }
+                            }, location);
+                        }
+                    } finally {
+                        for (const afterHook of supportCodeLibrary.afterTestCaseHookDefinitions) {
+                            if (afterHook.appliesToTestCase(testCase)) {
+                                const hookName = afterHook.name ?? 'After';
+                                const location = getLine(afterHook);
+                                await test.step(
+                                    hookName,
+                                    () => afterHook.code.apply(world, [{
+                                        gherkinDocument: feature.gherkinDocument,
+                                        testCaseStartedId: '0',
+                                        pickle: testCase,
+                                        result: {
+                                            duration: (Date.now() - result.start) as any,
+                                            message: result.error?.message,
+                                            status: result.status.toUpperCase(),
+                                            exception: result.error
+                                        }
+                                    } as ITestCaseHookParameter]),
+                                    location
+                                );
                             }
-                        }, location);
+                        }
                     }
-                })
+
+                }
+                testBody.toString = () => fixture.init.toString();
+                test(testCase.name, {tag, annotation}, testBody);
             }
-
-            test.afterEach(HOOK_NAMES.AFTER_HOOKS, async () => {
-                const testInfo = test.info();
-                const testId = getTestId(testInfo);
-                const world = worlds.get(testId);
-                const testCase = tests.find((t) => t.id === testId);
-                
-                if (!testCase) {
-                    throw new Error(`Test case with ID ${testId} not found`);
-                }
-                
-                for (const afterHook of supportCodeLibrary.afterTestCaseHookDefinitions) {
-                    if (afterHook.appliesToTestCase(testCase)) {
-                        const hookName = afterHook.name ?? HOOK_NAMES.AFTER;
-                        const location = getLine(afterHook);
-                        await test.step(
-                            hookName,
-                            () => afterHook.code.apply(world, [{
-                                gherkinDocument: feature.gherkinDocument,
-                                testCaseStartedId: DEFAULT_VALUES.TEST_CASE_ID,
-                                pickle: testCase,
-                                result: getResult(testInfo)
-                            } as any]),
-                            location
-                        );
-                    }
-                }
-            });
-
-            test.afterEach(HOOK_NAMES.WORLD, async () => {
-                const testId = getTestId(test.info());
-                worlds.delete(testId);
-            });
 
         });
     }
