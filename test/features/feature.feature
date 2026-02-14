@@ -66,3 +66,6 @@ Feature: test feature
 
   Scenario: template
     Given template step
+
+  Scenario: cucumber config
+    Given cucumber config

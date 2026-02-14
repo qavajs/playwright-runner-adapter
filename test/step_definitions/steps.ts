@@ -72,9 +72,9 @@ When('log', async function () {
     this.log('some data');
 });
 
-When('attach', async function () {
-   this.attach(JSON.stringify({ json: 'data' }), { mediaType: 'application/json', fileName: 'data.json' });
-   this.attach(JSON.stringify({ json: 'data' }));
+When('attach', async function (this: ExtendedPlaywrightWorld) {
+   await this.attach(JSON.stringify({ json: 'data' }), { mediaType: 'application/json', fileName: 'data.json' });
+   await this.attach(JSON.stringify({ json: 'data' }));
 });
 
 When('custom fixture', async function (this: ExtendedPlaywrightWorld) {
@@ -88,6 +88,10 @@ When('custom expect', async function (this: ExtendedPlaywrightWorld) {
 
 When('support code library', async function (this: ExtendedPlaywrightWorld) {
     this.expect(this.supportCodeLibrary).toBeTruthy();
+});
+
+When('cucumber config', async function (this: ExtendedPlaywrightWorld) {
+    this.expect(this.config).toBeTruthy();
 });
 
 When('execute step', async function (this: ExtendedPlaywrightWorld) {
