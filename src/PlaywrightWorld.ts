@@ -17,6 +17,7 @@ export class TestWorld {
         this.attach = options.attach;
         this.parameters = options.parameters;
         this.supportCodeLibrary = options.supportCodeLibrary;
+        this.config = options.config;
     }
 
     async executeStep(this: any, text: string, extraParam?: any) {

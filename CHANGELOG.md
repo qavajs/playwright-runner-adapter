@@ -14,6 +14,9 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 :microscope: - experimental
 
+## [2.3.0]
+- :rocket: simplified adapter by moving hook into test
+
 ## [2.2.0]
 - :rocket: added `request` into default fixture import
 - :beetle: fixed `attach` method type

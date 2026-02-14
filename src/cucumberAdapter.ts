@@ -51,11 +51,8 @@ interface TestResult {
     error?: Error;
 }
 
-interface HookResult {
-    duration: number | { nanos: number; seconds: number };
-    message?: string;
-    status: string;
-    exception?: Error;
+interface TestExecutionResult extends TestResult {
+    start: number;
 }
 
 /**
@@ -109,6 +106,69 @@ function stepName(pickleStep: {
     return step;
 }
 
+function createTestExecutionResult(): TestExecutionResult {
+    return {
+        status: 'passed',
+        start: Date.now()
+    };
+}
+
+function createHookResult(result: TestExecutionResult): any {
+    return {
+        duration: (Date.now() - result.start) as any,
+        message: result.error?.message,
+        status: result.status.toUpperCase(),
+        exception: result.error
+    };
+}
+
+function createStepHookParameter(
+    feature: any,
+    testCase: any,
+    pickleStep: any,
+    result: TestExecutionResult
+): ITestStepHookParameter {
+    return {
+        gherkinDocument: feature.gherkinDocument,
+        testCaseStartedId: DEFAULT_VALUES.TEST_CASE_ID,
+        testStepId: DEFAULT_VALUES.TEST_STEP_ID,
+        pickle: testCase,
+        pickleStep,
+        result: createHookResult(result)
+    } as any;
+}
+
+function createCaseHookParameter(
+    feature: any,
+    testCase: any,
+    result: TestExecutionResult
+): ITestCaseHookParameter {
+    return {
+        gherkinDocument: feature.gherkinDocument,
+        testCaseStartedId: DEFAULT_VALUES.TEST_CASE_ID,
+        pickle: testCase,
+        result: createHookResult(result)
+    } as any;
+}
+
+function findSingleStepDefinition(
+    supportCodeLibrary: any,
+    pickleStep: { text: string }
+): any {
+    const matchingSteps = supportCodeLibrary.stepDefinitions
+        .filter((stepDefinition: any) => stepDefinition.matchesStepName(pickleStep.text));
+
+    if (matchingSteps.length === 0) {
+        throw new Error(`Step '${pickleStep.text}' is not defined`);
+    }
+
+    if (matchingSteps.length > 1) {
+        throw new Error(`Step '${pickleStep.text}' matches multiple step definitions`);
+    }
+
+    return matchingSteps[0];
+}
+
 /**
  * Executes before all hooks
  */
@@ -159,8 +219,6 @@ export function defineConfig(config: any): any {
     const test: TestType<any, any> = fixture.test;
     executeBeforeAllHooks(test, supportCodeLibrary.beforeTestRunHookDefinitions);
 
-    const worlds = new Map<string, any>();
-
     for (const feature of features) {
         const tests = feature.tests;
         test.describe(feature.feature as string, () => {
@@ -168,23 +226,20 @@ export function defineConfig(config: any): any {
             for (const testCase of tests) {
                 const tag = [...new Set(testCase.tags.map((tag: { name: string }) => tag.name))];
                 const annotation = [
-                    {type: 'name', description: testCase.name},
-                    {type: 'uri', description: testCase.uri},
-                    {type: 'tags', description: JSON.stringify(tag)}
+                    {type: ANNOTATION_TYPES.NAME, description: testCase.name},
+                    {type: ANNOTATION_TYPES.URI, description: testCase.uri},
+                    {type: ANNOTATION_TYPES.TAGS, description: JSON.stringify(tag)}
                 ];
                 const testBody = async (fixtures: any) => {
-
                     const world = new supportCodeLibrary.World({
                         log,
                         attach,
-                        supportCodeLibrary
+                        supportCodeLibrary,
+                        config
                     });
                     world.init(fixtures);
 
-                    const result: { status: string, error?: Error, start: number } = {
-                        status: 'passed',
-                        start: Date.now(),
-                    };
+                    const result = createTestExecutionResult();
 
                     for (const beforeHook of supportCodeLibrary.beforeTestCaseHookDefinitions) {
                         if (beforeHook.appliesToTestCase(testCase)) {
@@ -206,18 +261,14 @@ export function defineConfig(config: any): any {
                             if (result.status !== 'passed') {
                                 break;
                             }
-                            const steps = supportCodeLibrary.stepDefinitions
-                                .filter(stepDefinition => stepDefinition.matchesStepName(pickleStep.text));
-                            if (steps.length === 0) throw new Error(`Step '${pickleStep.text}' is not defined`);
-                            if (steps.length > 1) throw new Error(`Step '${pickleStep.text}' matches multiple step definitions`);
-                            const [step] = steps;
+                            const step = findSingleStepDefinition(supportCodeLibrary, pickleStep);
                             const location = getLine(step);
                             await test.step(stepName(pickleStep), async () => {
                                 for (const beforeStep of supportCodeLibrary.beforeTestStepHookDefinitions) {
                                     if (beforeStep.appliesToTestCase(testCase)) {
                                         const location = getLine(beforeStep);
                                         await test.step(
-                                            'Before Step',
+                                            HOOK_NAMES.BEFORE_STEP,
                                             () => beforeStep.code.apply(world, [{
                                                 gherkinDocument: feature.gherkinDocument,
                                                 pickle: testCase,
@@ -245,20 +296,10 @@ export function defineConfig(config: any): any {
                                         if (afterStep.appliesToTestCase(testCase)) {
                                             const location = getLine(afterStep);
                                             await test.step(
-                                                'After Step',
+                                                HOOK_NAMES.AFTER_STEP,
                                                 () => afterStep.code.apply(world, [{
-                                                    gherkinDocument: feature.gherkinDocument,
-                                                    testCaseStartedId: '0',
-                                                    testStepId: '0',
-                                                    pickle: testCase,
-                                                    pickleStep,
-                                                    result: {
-                                                        duration: (Date.now() - result.start) as any,
-                                                        message: result.error?.message,
-                                                        status: result.status.toUpperCase(),
-                                                        exception: result.error
-                                                    }
-                                                } as ITestStepHookParameter]),
+                                                    ...createStepHookParameter(feature, testCase, pickleStep, result)
+                                                }]),
                                                 location
                                             );
                                         }
@@ -274,16 +315,8 @@ export function defineConfig(config: any): any {
                                 await test.step(
                                     hookName,
                                     () => afterHook.code.apply(world, [{
-                                        gherkinDocument: feature.gherkinDocument,
-                                        testCaseStartedId: '0',
-                                        pickle: testCase,
-                                        result: {
-                                            duration: (Date.now() - result.start) as any,
-                                            message: result.error?.message,
-                                            status: result.status.toUpperCase(),
-                                            exception: result.error
-                                        }
-                                    } as ITestCaseHookParameter]),
+                                        ...createCaseHookParameter(feature, testCase, result)
+                                    }]),
                                     location
                                 );
                             }
