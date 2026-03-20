@@ -14,6 +14,11 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 :microscope: - experimental
 
+## [Unreleased]
+- :beetle: fixed JUnit report path in PR workflow to use `test/report/report.xml`
+- :pencil: added explicit `exports` map in `package.json` for root and `./js` entrypoints
+- :pencil: restricted npm package contents via `files` allowlist in `package.json`
+
 ## [2.3.0]
 - :rocket: simplified adapter by moving hook into test
 
