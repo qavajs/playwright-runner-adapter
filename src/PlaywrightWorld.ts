@@ -1,31 +1,33 @@
 import { APIRequestContext, Browser, BrowserContext, Page, test, expect } from '@playwright/test';
+import type { CucumberAdapterConfig, SupportCodeLibrary, WorldOptions } from './types';
 
-/**
- * Cucumber world for playwright adapter
- */
 export class TestWorld {
-    log!: (data: any) => void;
-    attach!: (data: any, details?: { fileName?: string, mediaType: string }) => Promise<void>;
-    parameters!: string;
-    config: any;
-    supportCodeLibrary!: any;
+    log!: (data: unknown) => void;
+    attach!: (data: unknown, details?: { fileName?: string; mediaType: string }) => Promise<void>;
+    parameters!: unknown;
+    config!: CucumberAdapterConfig;
+    supportCodeLibrary!: SupportCodeLibrary;
     test = test;
     expect = expect;
 
-    constructor(options: any) {
-        this.log = options.log;
-        this.attach = options.attach;
+    constructor(options: WorldOptions) {
+        this.log = options.log ?? console.log;
+        this.attach = options.attach as TestWorld['attach'];
         this.parameters = options.parameters;
-        this.supportCodeLibrary = options.supportCodeLibrary;
-        this.config = options.config;
+        this.supportCodeLibrary = options.supportCodeLibrary!;
+        this.config = options.config!;
     }
 
-    async executeStep(this: any, text: string, extraParam?: any) {
-        const steps = this.supportCodeLibrary.stepDefinitions.filter((s: any) => s.matchesStepName(text));
+    async executeStep(this: TestWorld, text: string, extraParam?: unknown) {
+        const steps = this.supportCodeLibrary.stepDefinitions
+            .filter(s => s.matchesStepName(text));
         if (steps.length === 0) throw new Error(`Step "${text}" is not defined`);
-        if (steps.length > 1) throw new Error(`Step "${text}" matches multiple step definitions`);
-        const step = steps.pop() as any;
-        const { parameters } = await step.getInvocationParameters({ step: { text }, world: this } as any);
+        if (steps.length > 1) {
+            const locations = steps.map(s => `  ${s.uri}:${s.line}`).join('\n');
+            throw new Error(`Step "${text}" matches multiple step definitions:\n${locations}`);
+        }
+        const step = steps[0];
+        const { parameters } = await step.getInvocationParameters({ step: { text }, world: this });
         try {
             await step.code.apply(this, [...parameters, extraParam]);
         } catch (err) {
@@ -34,9 +36,6 @@ export class TestWorld {
     }
 }
 
-/**
- * Cucumber Playwright world for playwright adapter
- */
 export class PlaywrightWorld extends TestWorld {
     page!: Page;
     context!: BrowserContext;
@@ -44,10 +43,11 @@ export class PlaywrightWorld extends TestWorld {
     browserName!: string;
     request!: APIRequestContext;
 
-    init: ({ [fixture: string]: any }) = ({ browser, context, page, request }: { browser: Browser, context: BrowserContext, page: Page, request: APIRequestContext }) => {
+    // Cast preserves the destructured param form that Playwright reads via toString() to discover fixtures
+    init = (({ browser, context, page, request }: { browser: Browser; context: BrowserContext; page: Page; request: APIRequestContext }) => {
         this.browser = browser;
         this.context = context;
         this.page = page;
         this.request = request;
-    }
+    }) as (fixtures: Record<string, unknown>) => void;
 }

@@ -3,9 +3,10 @@ import { resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { AstBuilder, compile, GherkinClassicTokenMatcher, Parser } from '@cucumber/gherkin';
 import { supportCodeLibraryBuilder } from '@cucumber/cucumber';
-import type { Pickle, GherkinDocument } from '@cucumber/messages';
+import type { Pickle } from '@cucumber/messages';
 import { globSync } from 'glob';
 import { PlaywrightWorld } from './PlaywrightWorld';
+import type { CucumberAdapterConfig, Feature, SupportCodeLibrary } from './types';
 
 const uuidFn = () => randomUUID();
 const builder = new AstBuilder(uuidFn);
@@ -27,13 +28,6 @@ function duplicates(tests: readonly Pickle[]) {
     });
 }
 
-type Feature = {
-    feature?: string;
-    gherkinDocument: GherkinDocument;
-    tests: readonly Pickle[];
-    uri: string;
-}
-
 export function loadFeatures(globPattern: string[]): Feature[] {
     const files = globSync(globPattern);
     return files.map(file => {
@@ -48,7 +42,7 @@ export function loadFeatures(globPattern: string[]): Feature[] {
     });
 }
 
-export function loadStepDefinitions(globPattern: string[]) {
+export function loadStepDefinitions(globPattern: string[]): SupportCodeLibrary {
     supportCodeLibraryBuilder.reset(process.cwd(), uuidFn);
     supportCodeLibraryBuilder.methods.setWorldConstructor(PlaywrightWorld);
     const files = globSync(globPattern);
@@ -56,10 +50,10 @@ export function loadStepDefinitions(globPattern: string[]) {
         const filePath = resolve(file);
         require(filePath);
     }
-    return supportCodeLibraryBuilder.finalize();
+    return supportCodeLibraryBuilder.finalize() as unknown as SupportCodeLibrary;
 }
 
-export function load(config: any) {
+export function load(config: CucumberAdapterConfig): { features: Feature[]; supportCodeLibrary: SupportCodeLibrary } {
     const features = loadFeatures(config.paths);
     const supportCodeLibrary = loadStepDefinitions([
         ...(config.requireModules ?? []),

@@ -1,6 +1,6 @@
 {
   "name": "@qavajs/playwright-runner-adapter",
-  "version": "2.3.0",
+  "version": "2.3.1",
   "description": "adapter for playwright test runner",
   "main": "adapter/index.js",
   "types": "adapter/index.d.ts",
@@ -28,7 +28,7 @@
   "scripts": {
     "build": "tsc && tsc --project tsconfig.js.json",
     "test:ui": "playwright test --config test/playwright.config.ts --ui",
-    "test:e2e": "playwright test --config test/playwright.config.ts --project parallel --project serial"
+    "test:e2e": "playwright test --config test/playwright.config.ts --project parallel --project serial --project unit"
   },
   "author": "Alexandr Galichenko",
   "license": "MIT",
@@ -43,12 +43,12 @@
     "@cucumber/gherkin": "^39.0.0",
     "@cucumber/tag-expressions": "^9.1.0",
     "glob": "^13.0.6",
-    "@cucumber/cucumber": "^12.7.0"
+    "@cucumber/cucumber": "^12.8.1"
   },
   "devDependencies": {
-    "@playwright/test": "^1.58.2",
-    "@types/node": "^25.5.0",
-    "typescript": "^5.9.3"
+    "@playwright/test": "^1.59.1",
+    "@types/node": "^25.6.0",
+    "typescript": "^6.0.3"
   },
   "keywords": [
     "test",
