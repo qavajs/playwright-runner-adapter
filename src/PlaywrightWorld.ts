@@ -49,5 +49,5 @@ export class PlaywrightWorld extends TestWorld {
         this.context = context;
         this.page = page;
         this.request = request;
-    }) as (fixtures: Record<string, unknown>) => void;
+    }) as (fixtures: any) => void;
 }
