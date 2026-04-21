@@ -14,10 +14,18 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 :microscope: - experimental
 
-## [Unreleased]
+## [2.3.1]
 - :beetle: fixed JUnit report path in PR workflow to use `test/report/report.xml`
 - :pencil: added explicit `exports` map in `package.json` for root and `./js` entrypoints
 - :pencil: restricted npm package contents via `files` allowlist in `package.json`
+- :pencil: added shared type definitions (`CucumberAdapterConfig`, `HookDefinition`, `StepDefinitionMatch`, `SupportCodeLibrary`, `Feature`) replacing `any` throughout the codebase
+- :pencil: added explicit `rootDir` to both `tsconfig.json` and `tsconfig.js.json` for forward compatibility with stricter TypeScript versions
+- :beetle: improved error messages for undefined and ambiguous steps — now includes feature file URI and all matching step definition locations
+- :rocket: added optional `DEBUG=cucumber-adapter` environment variable for step-matching trace logging
+- :pencil: added tests for `{int}`, `{float}`, and `{word}` Cucumber parameter types
+- :pencil: added tests for Scenario Outlines with multiple `Examples:` tables
+- :pencil: added tests for tag-scoped `Before` and `After` hooks
+- :pencil: added unit tests for `tags()` and `filter()` utility functions
 
 ## [2.3.0]
 - :rocket: simplified adapter by moving hook into test

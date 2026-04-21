@@ -40,6 +40,8 @@ const customExpect = baseExpect.extend({
 class ExtendedPlaywrightWorld extends PlaywrightWorld {
     customFixture!: number;
     renamedCustomFixture!: number;
+    hookTagRan?: boolean;
+    afterHookTagRan?: boolean;
     test = fixture;
     expect = customExpect;
 
@@ -160,4 +162,29 @@ When('template step', Template(() => `
 
 When('log {string}', async function (value) {
     this.log(value);
+});
+
+When('I have {int} items', async function (this: ExtendedPlaywrightWorld, count: number) {
+    this.expect(count).toBe(42);
+});
+
+When('I have {float} value', async function (this: ExtendedPlaywrightWorld, value: number) {
+    this.expect(value).toBeCloseTo(3.14);
+});
+
+When('I am at step {word}', async function (this: ExtendedPlaywrightWorld, word: string) {
+    this.expect(word).toBe('hello');
+});
+
+When('tagged before hook ran', async function (this: ExtendedPlaywrightWorld) {
+    this.expect(this.hookTagRan).toBe(true);
+});
+
+Before({ tags: '@hookTagTest' }, async function (this: ExtendedPlaywrightWorld) {
+    this.hookTagRan = true;
+});
+
+After({ tags: '@hookTagTest' }, async function (this: ExtendedPlaywrightWorld, testCase: ITestCaseHookParameter) {
+    this.expect(testCase.result?.status).toEqual('PASSED');
+    this.afterHookTagRan = true;
 });

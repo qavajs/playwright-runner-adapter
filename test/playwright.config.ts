@@ -27,6 +27,10 @@ export default defineConfig({
     /* Configure projects for major browsers */
     projects: [
         {
+            name: 'unit',
+            testMatch: 'unit.spec.ts',
+        },
+        {
             name: 'adapterTS',
             testMatch: 'adapterTS.config.ts',
             use: {

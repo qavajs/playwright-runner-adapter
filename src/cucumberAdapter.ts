@@ -1,8 +1,19 @@
 import {load} from './loader';
 import type {TestInfo, TestType} from '@playwright/test';
 import type {ITestCaseHookParameter, ITestStepHookParameter} from '@cucumber/cucumber';
+import type {Pickle, PickleStep} from '@cucumber/messages';
+import type {
+    CucumberAdapterConfig,
+    Feature,
+    HookDefinition,
+    HookResult,
+    StepDefinitionMatch,
+    SupportCodeLibrary,
+    WorldBase
+} from './types';
 
-// Constants
+const DEBUG = process.env.DEBUG?.split(',').includes('cucumber-adapter') ?? false;
+
 const ANNOTATION_TYPES = {
     NAME: 'name',
     URI: 'uri',
@@ -34,40 +45,19 @@ const STEP_ARGUMENT_LABELS = {
     DATA_TABLE: ' [DataTable]'
 } as const;
 
-// Type definitions
 interface Location {
     file: string;
     line: number;
     column: number;
 }
 
-interface StepDefinition {
-    uri: string;
-    line: number;
-}
-
-interface TestResult {
+interface TestExecutionResult {
     status: string;
     error?: Error;
-}
-
-interface TestExecutionResult extends TestResult {
     start: number;
 }
 
-interface FeatureContext {
-    gherkinDocument: unknown;
-}
-
-interface PickleStep {
-    text: string;
-    argument?: { docString?: unknown };
-}
-
-/**
- * Creates a location object from step definition
- */
-function getLine(step: StepDefinition): { location: Location } {
+function getLine(step: Pick<HookDefinition, 'uri' | 'line'>): { location: Location } {
     return {
         location: {
             column: DEFAULT_VALUES.COLUMN,
@@ -77,41 +67,29 @@ function getLine(step: StepDefinition): { location: Location } {
     };
 }
 
-/**
- * Logs data to console
- */
 function log(data: unknown): void {
     console.log(data);
 }
 
-/**
- * Attaches content to test report
- */
 function attach(
     this: { test: { info: () => TestInfo } },
-    body: string | Buffer,
+    body: unknown,
     details?: { fileName?: string; mediaType?: string }
 ): Promise<void> {
     const fileName = details?.fileName ?? DEFAULT_VALUES.ATTACHMENT_FILENAME;
     const contentType = details?.mediaType ?? DEFAULT_VALUES.CONTENT_TYPE;
-    return this.test.info().attach(fileName, { body, contentType });
+    return this.test.info().attach(fileName, { body: body as string | Buffer, contentType });
 }
 
-/**
- * Generates a human-readable step name with argument type indicator
- */
-function stepName(pickleStep: {
-    text: string;
-    argument?: { docString?: unknown }
-}): string {
+function stepName(pickleStep: PickleStep): string {
     let step = pickleStep.text;
-    
+
     if (pickleStep.argument) {
         step += pickleStep.argument.docString
             ? STEP_ARGUMENT_LABELS.DOC_STRING
             : STEP_ARGUMENT_LABELS.DATA_TABLE;
     }
-    
+
     return step;
 }
 
@@ -122,17 +100,17 @@ function createTestExecutionResult(): TestExecutionResult {
     };
 }
 
-function createHookResult(result: TestExecutionResult): any {
+function createHookResult(result: TestExecutionResult): HookResult {
     return {
-        duration: (Date.now() - result.start) as any,
+        duration: Date.now() - result.start,
         message: result.error?.message,
         status: result.status.toUpperCase(),
         exception: result.error
     };
 }
 
-function createScenarioAnnotation(testCase: any): { type: string; description: string }[] {
-    const tag = [...new Set(testCase.tags.map((item: { name: string }) => item.name))];
+function createScenarioAnnotation(testCase: Pickle): { type: string; description: string }[] {
+    const tag = [...new Set(testCase.tags.map(item => item.name))];
     return [
         {type: ANNOTATION_TYPES.NAME, description: testCase.name},
         {type: ANNOTATION_TYPES.URI, description: testCase.uri},
@@ -140,11 +118,11 @@ function createScenarioAnnotation(testCase: any): { type: string; description: s
     ];
 }
 
-function createScenarioTags(testCase: any): string[] {
-    return [...new Set<string>(testCase.tags.map((item: { name: string }) => item.name))];
+function createScenarioTags(testCase: Pickle): string[] {
+    return [...new Set<string>(testCase.tags.map(item => item.name))];
 }
 
-function createCaseHookPayload(feature: FeatureContext, testCase: any): ITestCaseHookParameter {
+function createCaseHookPayload(feature: Feature, testCase: Pickle): ITestCaseHookParameter {
     return {
         gherkinDocument: feature.gherkinDocument,
         pickle: testCase
@@ -152,12 +130,12 @@ function createCaseHookPayload(feature: FeatureContext, testCase: any): ITestCas
 }
 
 async function executeCaseHooks(
-    test: TestType<any, any>,
-    hooks: any[],
-    world: any,
-    testCase: any,
+    test: TestType<Record<string, unknown>, Record<string, unknown>>,
+    hooks: HookDefinition[],
+    world: unknown,
+    testCase: Pickle,
     defaultHookName: string,
-    createPayload: (hook: any) => any
+    createPayload: (hook: HookDefinition) => unknown
 ): Promise<void> {
     for (const hook of hooks) {
         if (!hook.appliesToTestCase(testCase)) {
@@ -175,12 +153,12 @@ async function executeCaseHooks(
 }
 
 async function executeStepHooks(
-    test: TestType<any, any>,
-    hooks: any[],
-    world: any,
-    testCase: any,
+    test: TestType<Record<string, unknown>, Record<string, unknown>>,
+    hooks: HookDefinition[],
+    world: unknown,
+    testCase: Pickle,
     hookName: string,
-    createPayload: (hook: any) => any
+    createPayload: (hook: HookDefinition) => unknown
 ): Promise<void> {
     for (const hook of hooks) {
         if (!hook.appliesToTestCase(testCase)) {
@@ -197,9 +175,9 @@ async function executeStepHooks(
 }
 
 function createStepHookParameter(
-    feature: any,
-    testCase: any,
-    pickleStep: any,
+    feature: Feature,
+    testCase: Pickle,
+    pickleStep: PickleStep,
     result: TestExecutionResult
 ): ITestStepHookParameter {
     return {
@@ -209,12 +187,12 @@ function createStepHookParameter(
         pickle: testCase,
         pickleStep,
         result: createHookResult(result)
-    } as any;
+    } as unknown as ITestStepHookParameter;
 }
 
 function createCaseHookParameter(
-    feature: any,
-    testCase: any,
+    feature: Feature,
+    testCase: Pickle,
     result: TestExecutionResult
 ): ITestCaseHookParameter {
     return {
@@ -222,33 +200,42 @@ function createCaseHookParameter(
         testCaseStartedId: DEFAULT_VALUES.TEST_CASE_ID,
         pickle: testCase,
         result: createHookResult(result)
-    } as any;
+    } as unknown as ITestCaseHookParameter;
 }
 
 function findSingleStepDefinition(
-    supportCodeLibrary: any,
-    pickleStep: PickleStep
-): any {
+    supportCodeLibrary: SupportCodeLibrary,
+    pickleStep: PickleStep,
+    featureUri: string
+): StepDefinitionMatch {
     const matchingSteps = supportCodeLibrary.stepDefinitions
-        .filter((stepDefinition: any) => stepDefinition.matchesStepName(pickleStep.text));
+        .filter(stepDefinition => stepDefinition.matchesStepName(pickleStep.text));
+
+    if (DEBUG) {
+        console.log(`[cucumber-adapter] Matching: "${pickleStep.text}" — ${matchingSteps.length} match(es)`);
+    }
 
     if (matchingSteps.length === 0) {
-        throw new Error(`Step '${pickleStep.text}' is not defined`);
+        throw new Error(
+            `Step '${pickleStep.text}' is not defined\n  at ${featureUri}`
+        );
     }
 
     if (matchingSteps.length > 1) {
-        throw new Error(`Step '${pickleStep.text}' matches multiple step definitions`);
+        const locations = matchingSteps
+            .map(s => `  ${s.uri}:${s.line}`)
+            .join('\n');
+        throw new Error(
+            `Step '${pickleStep.text}' matches multiple step definitions:\n${locations}`
+        );
     }
 
     return matchingSteps[0];
 }
 
-/**
- * Executes before all hooks
- */
 function executeBeforeAllHooks(
-    test: TestType<any, any>,
-    hooks: any[]
+    test: TestType<Record<string, unknown>, Record<string, unknown>>,
+    hooks: HookDefinition[]
 ): void {
     if (hooks.length === 0) return;
     test.beforeAll(async () => {
@@ -260,15 +247,12 @@ function executeBeforeAllHooks(
                 location
             );
         }
-    })
+    });
 }
 
-/**
- * Executes after all hooks
- */
 function executeAfterAllHooks(
-    test: TestType<any, any>,
-    hooks: any[]
+    test: TestType<Record<string, unknown>, Record<string, unknown>>,
+    hooks: HookDefinition[]
 ): void {
     if (hooks.length === 0) return;
     test.afterAll(async () => {
@@ -283,14 +267,11 @@ function executeAfterAllHooks(
     });
 }
 
-/**
- * Main configuration function that sets up Cucumber adapter for Playwright
- */
-export function defineConfig(config: any): any {
+export function defineConfig(config: CucumberAdapterConfig): void {
     const {features, supportCodeLibrary} = load(config);
 
-    const fixture = new supportCodeLibrary.World({config});
-    const test: TestType<any, any> = fixture.test;
+    const fixture = new supportCodeLibrary.World({config}) as WorldBase;
+    const test = fixture.test as TestType<Record<string, unknown>, Record<string, unknown>>;
     executeBeforeAllHooks(test, supportCodeLibrary.beforeTestRunHookDefinitions);
 
     for (const feature of features) {
@@ -300,7 +281,7 @@ export function defineConfig(config: any): any {
             for (const testCase of tests) {
                 const tag = createScenarioTags(testCase);
                 const annotation = createScenarioAnnotation(testCase);
-                const testBody = async (fixtures: any) => {
+                const testBody = async (fixtures: Record<string, unknown>) => {
                     const world = new supportCodeLibrary.World({
                         log,
                         attach,
@@ -325,7 +306,7 @@ export function defineConfig(config: any): any {
                             if (result.status !== 'passed') {
                                 break;
                             }
-                            const step = findSingleStepDefinition(supportCodeLibrary, pickleStep);
+                            const step = findSingleStepDefinition(supportCodeLibrary, pickleStep, feature.uri);
                             const location = getLine(step);
                             await test.step(stepName(pickleStep), async () => {
                                 await executeStepHooks(
@@ -346,12 +327,12 @@ export function defineConfig(config: any): any {
                                         argument: pickleStep.argument
                                     },
                                     world
-                                } as any);
+                                });
                                 try {
                                     await step.code.apply(world, parameters);
-                                } catch (err: any) {
+                                } catch (err) {
                                     result.status = 'failed';
-                                    result.error = err;
+                                    result.error = err as Error;
                                     throw err;
                                 } finally {
                                     await executeStepHooks(
@@ -376,7 +357,7 @@ export function defineConfig(config: any): any {
                         );
                     }
 
-                }
+                };
                 testBody.toString = () => fixture.init.toString();
                 test(testCase.name, {tag, annotation}, testBody);
             }
