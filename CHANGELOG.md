@@ -14,6 +14,9 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 :microscope: - experimental
 
+## [2.3.2]
+- :beetle: fixed fixture type cast in `PlaywrightWorld` to use `any` instead of `Record<string, unknown>`
+
 ## [2.3.1]
 - :beetle: fixed JUnit report path in PR workflow to use `test/report/report.xml`
 - :pencil: added explicit `exports` map in `package.json` for root and `./js` entrypoints
