@@ -12,8 +12,6 @@ import type {
     WorldBase
 } from './types';
 
-const DEBUG = process.env.DEBUG?.split(',').includes('cucumber-adapter') ?? false;
-
 const ANNOTATION_TYPES = {
     NAME: 'name',
     URI: 'uri',
@@ -210,10 +208,6 @@ function findSingleStepDefinition(
 ): StepDefinitionMatch {
     const matchingSteps = supportCodeLibrary.stepDefinitions
         .filter(stepDefinition => stepDefinition.matchesStepName(pickleStep.text));
-
-    if (DEBUG) {
-        console.log(`[cucumber-adapter] Matching: "${pickleStep.text}" — ${matchingSteps.length} match(es)`);
-    }
 
     if (matchingSteps.length === 0) {
         throw new Error(
