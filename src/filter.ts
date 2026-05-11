@@ -1,4 +1,4 @@
-import parse from '@cucumber/tag-expressions';
+import { parse } from '@cucumber/tag-expressions';
 
 class TagExpression extends RegExp {
     private expressionNode: {

@@ -1,3 +1,5 @@
+import type { TestWorld } from './PlaywrightWorld';
+
 /**
  * Define template step
  * @param {string} scenario - multiline string with steps
@@ -7,10 +9,10 @@
  *     I expect '${locator} > Value' to equal '${expected}'
  * `));
  */
-export function Template(scenario: (...args: any[]) => string) {
+export function Template(scenario: (...args: unknown[]) => string) {
     return new Proxy(scenario, {
-        apply: async function (template: (...args: string[]) => string, world: { executeStep: (step: string) => Promise<void> }, args: any[]) {
-            const scenario = template(...args) ;
+        apply: async function (template: (...args: unknown[]) => string, world: TestWorld, args: unknown[]) {
+            const scenario = template(...args);
             const steps = scenario
                 .split('\n')
                 .map(step => step.trim())
@@ -19,5 +21,5 @@ export function Template(scenario: (...args: any[]) => string) {
                 await world.executeStep(step);
             }
         },
-    })
+    });
 }
