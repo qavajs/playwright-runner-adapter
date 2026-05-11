@@ -14,6 +14,14 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 :microscope: - experimental
 
+## [2.3.3]
+- :beetle: fixed named import for `parse` from `@cucumber/tag-expressions` in `filter.ts`
+- :beetle: fixed `attach` method assignment in `PlaywrightWorld` constructor
+- :beetle: made `uri` optional in `HookDefinition` and `StepDefinitionMatch` interfaces
+- :beetle: improved `executeStep` error handling to preserve original error as `cause`
+- :pencil: made `mediaType` optional in `attach` method signature
+- :pencil: removed debug log statements from `cucumberAdapter.ts`
+
 ## [2.3.2]
 - :beetle: fixed fixture type cast in `PlaywrightWorld` to use `any` instead of `Record<string, unknown>`
 
