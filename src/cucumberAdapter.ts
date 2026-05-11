@@ -1,6 +1,6 @@
 import {load} from './loader';
 import type {TestInfo, TestType} from '@playwright/test';
-import type {ITestCaseHookParameter, ITestStepHookParameter} from '@cucumber/cucumber';
+import type {ITestCaseHookParameter} from '@cucumber/cucumber';
 import type {Pickle, PickleStep} from '@cucumber/messages';
 import type {
     CucumberAdapterConfig,
@@ -55,7 +55,8 @@ interface TestExecutionResult {
     start: number;
 }
 
-function getLine(step: Pick<HookDefinition, 'uri' | 'line'>): { location: Location } {
+function getLine(step: Pick<HookDefinition, 'uri' | 'line'>): { location?: Location } {
+    if (!step.uri) return {};
     return {
         location: {
             column: DEFAULT_VALUES.COLUMN,
@@ -120,17 +121,18 @@ function createScenarioTags(testCase: Pickle): string[] {
     return [...new Set<string>(testCase.tags.map(item => item.name))];
 }
 
-function createCaseHookPayload(feature: Feature, testCase: Pickle): ITestCaseHookParameter {
+function createCaseHookPayload(feature: Feature, testCase: Pickle): Pick<ITestCaseHookParameter, 'gherkinDocument' | 'pickle'> & { testCaseStartedId: string } {
     return {
         gherkinDocument: feature.gherkinDocument,
-        pickle: testCase
-    } as ITestCaseHookParameter;
+        pickle: testCase,
+        testCaseStartedId: DEFAULT_VALUES.TEST_CASE_ID
+    };
 }
 
 async function executeCaseHooks(
     test: TestType<Record<string, unknown>, Record<string, unknown>>,
     hooks: HookDefinition[],
-    world: unknown,
+    world: WorldBase,
     testCase: Pickle,
     defaultHookName: string,
     createPayload: (hook: HookDefinition) => unknown
@@ -153,7 +155,7 @@ async function executeCaseHooks(
 async function executeStepHooks(
     test: TestType<Record<string, unknown>, Record<string, unknown>>,
     hooks: HookDefinition[],
-    world: unknown,
+    world: WorldBase,
     testCase: Pickle,
     hookName: string,
     createPayload: (hook: HookDefinition) => unknown
@@ -177,7 +179,7 @@ function createStepHookParameter(
     testCase: Pickle,
     pickleStep: PickleStep,
     result: TestExecutionResult
-): ITestStepHookParameter {
+) {
     return {
         gherkinDocument: feature.gherkinDocument,
         testCaseStartedId: DEFAULT_VALUES.TEST_CASE_ID,
@@ -185,20 +187,20 @@ function createStepHookParameter(
         pickle: testCase,
         pickleStep,
         result: createHookResult(result)
-    } as unknown as ITestStepHookParameter;
+    };
 }
 
 function createCaseHookParameter(
     feature: Feature,
     testCase: Pickle,
     result: TestExecutionResult
-): ITestCaseHookParameter {
+) {
     return {
         gherkinDocument: feature.gherkinDocument,
         testCaseStartedId: DEFAULT_VALUES.TEST_CASE_ID,
         pickle: testCase,
         result: createHookResult(result)
-    } as unknown as ITestCaseHookParameter;
+    };
 }
 
 function findSingleStepDefinition(

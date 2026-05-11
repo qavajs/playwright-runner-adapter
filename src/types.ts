@@ -18,7 +18,7 @@ export interface WorldOptions {
 }
 
 export interface HookDefinition {
-    uri: string;
+    uri?: string;
     line: number;
     name?: string;
     code: (this: unknown, ...args: unknown[]) => Promise<void> | void;
@@ -26,7 +26,7 @@ export interface HookDefinition {
 }
 
 export interface StepDefinitionMatch {
-    uri: string;
+    uri?: string;
     line: number;
     code: (this: unknown, ...args: unknown[]) => Promise<void> | void;
     matchesStepName(text: string): boolean;
