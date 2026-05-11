@@ -3,7 +3,7 @@ import type { CucumberAdapterConfig, SupportCodeLibrary, WorldOptions } from './
 
 export class TestWorld {
     log!: (data: unknown) => void;
-    attach!: (data: unknown, details?: { fileName?: string; mediaType: string }) => Promise<void>;
+    attach!: (data: unknown, details?: { fileName?: string; mediaType?: string }) => Promise<void>;
     parameters!: unknown;
     config!: CucumberAdapterConfig;
     supportCodeLibrary!: SupportCodeLibrary;
@@ -12,7 +12,7 @@ export class TestWorld {
 
     constructor(options: WorldOptions) {
         this.log = options.log ?? console.log;
-        this.attach = options.attach as TestWorld['attach'];
+        this.attach = options.attach!;
         this.parameters = options.parameters;
         this.supportCodeLibrary = options.supportCodeLibrary!;
         this.config = options.config!;
@@ -31,7 +31,7 @@ export class TestWorld {
         try {
             await step.code.apply(this, [...parameters, extraParam]);
         } catch (err) {
-            throw new Error(`${text}\n${err}`);
+            throw new Error(`Step failed: ${text}`, { cause: err });
         }
     }
 }
