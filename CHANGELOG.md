@@ -14,6 +14,9 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 :microscope: - experimental
 
+## [2.4.0]
+- :rocket: added support of Cucumber 13
+
 ## [2.3.3]
 - :beetle: fixed named import for `parse` from `@cucumber/tag-expressions` in `filter.ts`
 - :beetle: fixed `attach` method assignment in `PlaywrightWorld` constructor
