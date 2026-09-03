@@ -8,8 +8,8 @@
   "compilerOptions": {
     "rootDir": "./src",
     "target": "es2023",
-    "module": "node16",
-    "moduleResolution": "node16",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
     "outDir": "./adapter",
     "esModuleInterop": true,
     "sourceMap": true,
