@@ -40,15 +40,15 @@
     "url": "https://github.com/qavajs/playwright-runner-adapter/issues"
   },
   "dependencies": {
-    "@cucumber/cucumber": "^13.2.1",
+    "@cucumber/cucumber": "^13.3.0",
     "@cucumber/gherkin": "^42.0.1",
     "@cucumber/tag-expressions": "^11.0.1",
-    "glob": "^13.0.6"
+    "glob": "^14.0.4"
   },
   "devDependencies": {
-    "@playwright/test": "^1.62.1",
+    "@playwright/test": "^1.65.0",
     "@qavajs/playwright-console-reporter": "^0.1.0",
-    "@types/node": "^26.4.1",
+    "@types/node": "^26.6.6",
     "typescript": "^7.0.2"
   },
   "keywords": [

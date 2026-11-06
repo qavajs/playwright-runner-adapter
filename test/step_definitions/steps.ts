@@ -188,3 +188,11 @@ After({ tags: '@hookTagTest' }, async function (this: ExtendedPlaywrightWorld, t
     this.expect(testCase.result?.status).toEqual('PASSED');
     this.afterHookTagRan = true;
 });
+When('test is marked as slow', async function (this: ExtendedPlaywrightWorld) {
+    // default timeout is tripled by test.slow()
+    this.expect(this.test.info().timeout).toBe(90_000);
+});
+
+When('annotation {string} is {string}', async function (this: ExtendedPlaywrightWorld, type: string, description: string) {
+    this.expect(this.test.info().annotations).toContainEqual(this.expect.objectContaining({ type, description }));
+});

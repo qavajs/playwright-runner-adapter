@@ -4,28 +4,39 @@ permissions:
   contents: read
 
 on:
+  push:
+    branches:
+      - main
   pull_request:
     branches:
       - main
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     strategy:
+      fail-fast: false
       matrix:
-        version: [ 20, 22, 24 ]
+        version: [ 22, 24, 26 ]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: ${{ matrix.version }}
+          cache: npm
       - run: npm ci
+      - run: npm audit --omit=dev --audit-level=high
       - run: npx playwright install
       - run: npm run build
       - run: npm run test:e2e
       - name: junit report
-        uses: mikepenz/action-junit-report@v4
+        uses: mikepenz/action-junit-report@v6
         if: always()
         with:
           report_paths: './test/report/report.xml'
           fail_on_failure: true
+          require_tests: true
