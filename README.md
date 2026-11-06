@@ -19,6 +19,7 @@ Adapter to run [Cucumber](https://cucumber.io/) BDD tests via the [Playwright](h
 - [Filtering Tests](#filtering-tests)
   - [Tag Expressions](#tag-expressions)
   - [Predicate Filter](#predicate-filter)
+- [Annotations, Modifiers and Locks](#annotations-modifiers-and-locks)
 - [Parallelism](#parallelism)
 - [JavaScript / CommonJS Support](#javascript--commonjs-support)
 - [Limitations](#limitations)
@@ -345,6 +346,43 @@ export default defineConfig({
 ```
 
 The predicate receives the full test name (feature + scenario title + tags) and should return `true` to include the test.
+
+---
+
+## Annotations, Modifiers and Locks
+
+Gherkin tags are translated into Playwright [test details](https://playwright.dev/docs/test-annotations). The special tags below are consumed: they are removed from the scenario's Playwright tags (and the `tags` annotation), so they don't show up as tags in reports and can't be matched with `grep` / `tags()`. All other tags are kept as Playwright tags.
+
+| Tag | Playwright equivalent |
+|---|---|
+| `@skip()` / `@skip(reason)` | skips the scenario — fixtures are not set up |
+| `@fixme()` / `@fixme(reason)` | same as skip, marks the scenario as to be fixed |
+| `@fail()` / `@fail(reason)` | scenario passes only if it fails |
+| `@slow()` / `@slow(reason)` | triples the timeout |
+| `@lock(name)` | `lock: 'name'` — scenarios sharing a lock never run concurrently |
+| `@lock(-exclusive-)` | built-in exclusive lock — runs only when no other test is running |
+| `@annotation(type,description)` | `annotation: { type, description }` — description is optional: `@annotation(flaky)` |
+
+Modifiers are passed as annotations of type `skip`, `fixme`, `fail`, `slow`, which Playwright applies like `test.skip()` and the other modifiers, and the optional reason is shown in the report. Plain tags such as `@skip` or `@slow` are ordinary tags and do nothing. Tags set on a `Feature` or `Rule` apply to all its scenarios.
+
+> Gherkin tags may not contain whitespace, so write `@annotation(issue,JIRA-123)` without a space after the comma. Everything after the first comma is the description.
+
+```gherkin
+@lock(user-settings)
+Feature: user settings
+
+  @annotation(issue,JIRA-123)
+  Scenario: update settings
+    When I update settings
+
+  @lock(-exclusive-) @slow(full-reset)
+  Scenario: reset all data
+    When I reset the database
+```
+
+Locks are a lighter alternative to splitting scenarios into a separate serial project (see [Parallelism](#parallelism)): only scenarios sharing the same lock are serialized, everything else stays parallel. Locks require `@playwright/test` 1.65+.
+
+Runtime annotations can be added from steps via `this.test.info().annotations.push({ type, description })`.
 
 ---
 

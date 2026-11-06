@@ -1,4 +1,5 @@
 import {load} from './loader';
+import {resolveTestDetails} from './testDetails';
 import type {TestInfo, TestType} from '@playwright/test';
 import type {ITestCaseHookParameter} from '@cucumber/cucumber';
 import type {Pickle, PickleStep} from '@cucumber/messages';
@@ -11,12 +12,6 @@ import type {
     SupportCodeLibrary,
     WorldBase
 } from './types';
-
-const ANNOTATION_TYPES = {
-    NAME: 'name',
-    URI: 'uri',
-    TAGS: 'tags'
-} as const;
 
 const HOOK_NAMES = {
     BEFORE_ALL: 'Before All',
@@ -106,19 +101,6 @@ function createHookResult(result: TestExecutionResult): HookResult {
         status: result.status.toUpperCase(),
         exception: result.error
     };
-}
-
-function createScenarioAnnotation(testCase: Pickle): { type: string; description: string }[] {
-    const tag = [...new Set(testCase.tags.map(item => item.name))];
-    return [
-        {type: ANNOTATION_TYPES.NAME, description: testCase.name},
-        {type: ANNOTATION_TYPES.URI, description: testCase.uri},
-        {type: ANNOTATION_TYPES.TAGS, description: JSON.stringify(tag)}
-    ];
-}
-
-function createScenarioTags(testCase: Pickle): string[] {
-    return [...new Set<string>(testCase.tags.map(item => item.name))];
 }
 
 function createCaseHookPayload(feature: Feature, testCase: Pickle): Pick<ITestCaseHookParameter, 'gherkinDocument' | 'pickle'> & { testCaseStartedId: string } {
@@ -275,8 +257,7 @@ export function defineConfig(config: CucumberAdapterConfig): void {
         test.describe(feature.feature as string, () => {
 
             for (const testCase of tests) {
-                const tag = createScenarioTags(testCase);
-                const annotation = createScenarioAnnotation(testCase);
+                const {tag, annotation, lock} = resolveTestDetails(testCase);
                 const testBody = async (fixtures: Record<string, unknown>) => {
                     const world = new supportCodeLibrary.World({
                         log,
@@ -355,7 +336,8 @@ export function defineConfig(config: CucumberAdapterConfig): void {
 
                 };
                 testBody.toString = () => fixture.init.toString();
-                test(testCase.name, {tag, annotation}, testBody);
+                const details = lock.length > 0 ? {tag, annotation, lock} : {tag, annotation};
+                test(testCase.name, details, testBody);
             }
 
         });
