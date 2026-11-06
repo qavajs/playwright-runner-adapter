@@ -22,6 +22,8 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 - :pencil: updated `@cucumber/cucumber` to 13, `@cucumber/gherkin` to 42, `@cucumber/tag-expressions` to 11 and `glob` to 14
 - :pencil: updated dev dependencies: `@playwright/test` 1.65, `@types/node` 26, `typescript` 7
 - :pencil: switched `module` and `moduleResolution` to `nodenext` in `tsconfig.json` and `tsconfig.js.json`
+- :x: dropped Node.js 20 support (`engines.node` is now `>=22`); CI tests against Node.js 22, 24 and 26
+- :pencil: CI: updated `actions/checkout` and `actions/setup-node` to v7, `mikepenz/action-junit-report` to v6; tests also run on push to `main`, `npm audit` gate for production dependencies, junit report requires tests, e2e tests gate npm publish, publish with provenance
 
 ## [2.3.3]
 - :beetle: fixed named import for `parse` from `@cucumber/tag-expressions` in `filter.ts`
