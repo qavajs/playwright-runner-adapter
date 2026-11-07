@@ -6,6 +6,8 @@ import { tags } from '../src';
  */
 export default defineConfig({
     testMatch: 'cucumber.config.ts',
+    /* consumer projects of the package smoke test, run by test/package/run.mjs */
+    testIgnore: 'package/**',
     /* Retry on CI only */
     retries: 2,
     /* Opt out of parallel tests on CI. */

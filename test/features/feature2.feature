@@ -4,15 +4,15 @@ Feature: test feature 2
     Given simple step
 
   Scenario: simple scenario
-    Given open 'https://google.com' url
+    Given open 'home.html' url
 
   Scenario Outline: simple scenario <example>
     Given open '<example>' url
 
     Examples:
       | example                    |
-      | https://www.wikipedia.org/ |
-      | https://www.saucedemo.com/ |
+      | wiki.html |
+      | shop.html |
 
   Scenario: data table
     Given data table step

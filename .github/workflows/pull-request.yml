@@ -16,27 +16,55 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  test:
-    strategy:
-      fail-fast: false
-      matrix:
-        version: [ 22, 24, 26 ]
+  checks:
+    name: Audit and type check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
-          node-version: ${{ matrix.version }}
+          node-version: 24
           cache: npm
       - run: npm ci
       - run: npm audit --omit=dev --audit-level=high
-      - run: npx playwright install
       - run: npm run build
-      - run: npm run test:e2e
+      - name: type check tests against the build
+        run: npm run test:types
+
+  test:
+    name: Test (Node.js ${{ matrix.node }})
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [ 22, 24, 26 ]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run build
+      # all projects: unit, parallel, serial, and the TS / CommonJS / ESM adapter configs
+      - name: all test projects
+        run: npm run test:all
+      - name: CUCUMBER_PATHS and CUCUMBER_TAGS env variables
+        env:
+          CUCUMBER_PATHS: test/features/hooks.feature,test/features/rule.feature
+          CUCUMBER_TAGS: '@hookTagTest'
+        run: |
+          npx playwright test --config test/playwright.config.ts --project parallel --list --reporter=list | tee list.txt
+          grep -q "Total: 2 tests in 1 file" list.txt
+      # packs the package and runs it in fresh CommonJS, ES modules and TypeScript projects
+      - name: package smoke test
+        run: npm run test:package
       - name: junit report
         uses: mikepenz/action-junit-report@v6
         if: always()
         with:
+          check_name: JUnit (Node.js ${{ matrix.node }})
           report_paths: './test/report/report.xml'
           fail_on_failure: true
           require_tests: true

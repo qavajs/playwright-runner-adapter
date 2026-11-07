@@ -1,6 +1,7 @@
 import {
     Given,
     When,
+    Then,
     setWorldConstructor,
     DataTable,
     Before,
@@ -14,6 +15,8 @@ import {
     PlaywrightWorld, Template
 } from '../../adapter';
 import { test as base, expect as baseExpect, Page } from '@playwright/test';
+import { resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 type Fixture = {
     customFixture: number
@@ -54,8 +57,14 @@ class ExtendedPlaywrightWorld extends PlaywrightWorld {
 
 setWorldConstructor(ExtendedPlaywrightWorld);
 
-Given('open {string} url', async function (this: ExtendedPlaywrightWorld, url) {
-    await this.page.goto(url);
+// scenarios that are expected to fail or end with non-passed status
+const expectsPass = (pickle: ITestCaseHookParameter['pickle']) =>
+    !pickle.tags.some(tag => /^@(statusCheck|fail)\(/.test(tag.name));
+
+// pages are served from test/pages, so tests don't depend on the network
+Given('open {string} url', async function (this: ExtendedPlaywrightWorld, page: string) {
+    await this.page.goto(pathToFileURL(resolve(__dirname, '../pages', page)).href);
+    await this.expect(this.page.locator('h1')).toBeVisible();
 });
 
 When(/^simple step$/, async function () {
@@ -112,7 +121,7 @@ After(async function (this: ExtendedPlaywrightWorld, testCase: ITestCaseHookPara
     this.expect(testCase.gherkinDocument).toBeTruthy();
     this.expect(testCase.pickle).toBeTruthy();
     this.expect(testCase.result).toBeTruthy();
-    this.expect(testCase.result?.status).toEqual('PASSED');
+    if (expectsPass(testCase.pickle)) this.expect(testCase.result?.status).toEqual('PASSED');
     this.expect(testCase.result?.duration).toBeGreaterThan(0);
 });
 
@@ -126,7 +135,7 @@ AfterStep(async function (this: ExtendedPlaywrightWorld, testCase: ITestStepHook
     this.expect(testCase.pickle).toBeTruthy();
     this.expect(testCase.pickleStep).toBeTruthy();
     this.expect(testCase.result).toBeTruthy();
-    this.expect(testCase.result?.status).toEqual('PASSED');
+    if (expectsPass(testCase.pickle)) this.expect(testCase.result?.status).toEqual('PASSED');
 });
 
 Before({name: 'Named Before'}, async function (this: ExtendedPlaywrightWorld, testCase: ITestCaseHookParameter) {
@@ -137,7 +146,7 @@ After({name: 'Named After'}, async function (this: ExtendedPlaywrightWorld, test
     this.expect(testCase.gherkinDocument).toBeTruthy();
     this.expect(testCase.pickle).toBeTruthy();
     this.expect(testCase.result).toBeTruthy();
-    this.expect(testCase.result?.status).toEqual('PASSED');
+    if (expectsPass(testCase.pickle)) this.expect(testCase.result?.status).toEqual('PASSED');
     this.expect(testCase.result?.duration).toBeGreaterThan(0);
 });
 
@@ -185,7 +194,7 @@ Before({ tags: '@hookTagTest' }, async function (this: ExtendedPlaywrightWorld) 
 });
 
 After({ tags: '@hookTagTest' }, async function (this: ExtendedPlaywrightWorld, testCase: ITestCaseHookParameter) {
-    this.expect(testCase.result?.status).toEqual('PASSED');
+    if (expectsPass(testCase.pickle)) this.expect(testCase.result?.status).toEqual('PASSED');
     this.afterHookTagRan = true;
 });
 When('test is marked as slow', async function (this: ExtendedPlaywrightWorld) {
@@ -195,4 +204,98 @@ When('test is marked as slow', async function (this: ExtendedPlaywrightWorld) {
 
 When('annotation {string} is {string}', async function (this: ExtendedPlaywrightWorld, type: string, description: string) {
     this.expect(this.test.info().annotations).toContainEqual(this.expect.objectContaining({ type, description }));
+});
+
+Then('require module is loaded', async function (this: ExtendedPlaywrightWorld) {
+    this.expect((globalThis as Record<string, unknown>).__requireModuleLoaded).toBe(true);
+});
+
+Then('world parameter {string} is {string}', async function (this: ExtendedPlaywrightWorld, key: string, value: string) {
+    this.expect((this.parameters as Record<string, unknown>)[key]).toBe(value);
+});
+
+When('attach with media type string', async function (this: ExtendedPlaywrightWorld) {
+    await this.attach(JSON.stringify({ json: 'data' }), 'application/json');
+});
+
+When('attach base64 {string} as {string}', async function (this: ExtendedPlaywrightWorld, data: string, mediaType: string) {
+    await this.attach(data, mediaType);
+});
+
+function lastAttachment(world: ExtendedPlaywrightWorld, name: string) {
+    const attachment = world.test.info().attachments.filter(a => a.name === name).at(-1);
+    world.expect(attachment, `attachment '${name}' exists`).toBeTruthy();
+    return attachment!;
+}
+
+Then('attachment {string} has content type {string}', async function (this: ExtendedPlaywrightWorld, name: string, contentType: string) {
+    this.expect(lastAttachment(this, name).contentType).toBe(contentType);
+});
+
+Then('attachment {string} has body {string}', async function (this: ExtendedPlaywrightWorld, name: string, body: string) {
+    // log attachment is written asynchronously
+    await this.expect.poll(() => lastAttachment(this, name).body?.toString()).toBe(body);
+});
+
+When('pending step', async function () {
+    return 'pending';
+});
+
+When('skipped step', async function () {
+    return 'skipped';
+});
+
+Before({ tags: '@failInBefore' }, async function () {
+    throw new Error('fail in before hook');
+});
+
+const statusChecks: Array<{ scenario: string, expected: string, actual?: string }> = [];
+
+After(async function (this: ExtendedPlaywrightWorld, { pickle, result }: ITestCaseHookParameter) {
+    for (const tag of pickle.tags) {
+        const match = /^@statusCheck\((\w+)\)$/.exec(tag.name);
+        if (match) statusChecks.push({ scenario: pickle.name, expected: match[1], actual: result?.status });
+        if (tag.name === '@messageCheck(timed-out)') {
+            statusChecks.push({ scenario: pickle.name, expected: 'timed out', actual: /timed out after 100 ms/.test(result?.message ?? '') ? 'timed out' : result?.message });
+        }
+    }
+});
+
+AfterAll(async function () {
+    for (const check of statusChecks) {
+        customExpect(check.actual, `status of '${check.scenario}'`).toBe(check.expected);
+    }
+});
+
+When('execute step with arguments', async function (this: ExtendedPlaywrightWorld) {
+    await this.executeStep('data table step', [['1'], ['2']]);
+    await this.executeStep('data table step', new DataTable([['1'], ['2']]));
+    await this.executeStep('multiline step', 'first\nsecond');
+});
+
+When('template with arguments', Template(() => `
+    data table step
+      | 1 |
+      | 2 |
+    multiline step
+      """
+      first
+      second
+      """
+`));
+
+Then('test location is line {int} of {string}', async function (this: ExtendedPlaywrightWorld, line: number, file: string) {
+    const info = this.test.info();
+    this.expect(info.file.endsWith(file)).toBe(true);
+    this.expect(info.line).toBe(line);
+});
+
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+When('step that takes 500 ms with 100 ms timeout', { timeout: 100 }, async function () {
+    await sleep(500);
+});
+
+Before({ tags: '@slowBeforeHook', timeout: 100 }, async function () {
+    await sleep(500);
 });

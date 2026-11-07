@@ -14,6 +14,34 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 :microscope: - experimental
 
+## [2.5.0]
+- :beetle: `requireModules` are now required as modules (e.g. `ts-node/register`) resolved from the current working directory instead of being treated as globs
+- :beetle: `worldParameters` config option is passed to the world as `this.parameters`
+- :beetle: `this.attach` accepts media type as a string (`attach(data, 'image/png')`), decodes `;base64` media types and supports readable streams
+- :beetle: `this.log` attaches text to the report (attachment `log` on the current step) instead of printing to stdout
+- :beetle: steps returning `'pending'` fail the scenario (or mark it as fixme with `strict: false`); steps and `Before` hooks returning `'skipped'` skip the scenario
+- :beetle: `After` hooks receive `FAILED` status when a `Before` hook fails; soft assertion failures, undefined, ambiguous and pending steps are reported with their own status
+- :beetle: features with the same name in different files no longer produce duplicate test titles; unnamed features use the file path as title
+- :rocket: undefined step error includes the feature file location and a step definition snippet
+- :rocket: added `tags` config option and `CUCUMBER_TAGS` env variable to select scenarios by tag expression evaluated on Gherkin tags
+- :rocket: added `CUCUMBER_PATHS` env variable to override feature paths
+- :rocket: `executeStep` accepts a doc string (`string`) or data table (`string[][]` / `DataTable`) argument
+- :rocket: `Template` supports data tables and doc strings
+- :rocket: tests and describe blocks are reported at their location in the `.feature` file
+- :rocket: step titles include a preview of their doc string or data table argument
+- :rocket: added `@timeout(ms)` tag to set test timeout and `@retries(n)` feature tag to set retries
+- :rocket: added `withWorld<World>()` helper returning step and hook functions with typed `this`
+- :rocket: added `stepLocation` config option to point steps to the feature file instead of step definitions
+- :rocket: step and hook `{ timeout }` option and `setDefaultTimeout` are applied (no implicit 5s default)
+- :rocket: steps run by `executeStep` and `Template` are shown as nested steps in the report
+- :rocket: invalid tag expressions report their source (`tags()`, `tags` option, `CUCUMBER_TAGS`); tags without `@` are rejected
+- :pencil: replaced `glob` dependency with built-in `fs.globSync`; matched files are loaded in sorted order
+- :pencil: tests no longer depend on external websites
+- :pencil: CI: tests cover all test projects (TS, CommonJS, ESM configs), `CUCUMBER_PATHS` / `CUCUMBER_TAGS`, type checks and a smoke test of the packed package in fresh CommonJS, ESM and TypeScript projects
+- :pencil: CI: publish no longer runs e2e tests
+- :pencil: README: clarified the difference between the main and `./js` entrypoints
+- :pencil: documented and tested supported Cucumber APIs: `defineParameterType`, `setDefinitionFunctionWrapper`, localized Gherkin, Rule tags
+
 ## [2.4.0]
 - :rocket: added `@lock(name)` tag mapped to playwright test locks (`@lock(-exclusive-)` for the built-in exclusive lock)
 - :rocket: added `@skip(reason)`, `@fixme(reason)`, `@fail(reason)`, `@slow(reason)` tags mapped to playwright test modifiers (reason is optional: `@skip()`)
