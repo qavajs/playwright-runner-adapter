@@ -13,15 +13,20 @@ Adapter to run [Cucumber](https://cucumber.io/) BDD tests via the [Playwright](h
   - [TestWorld](#testworld)
   - [PlaywrightWorld](#playwrightworld)
   - [Custom World](#custom-world)
+  - [Typed Steps](#typed-steps)
 - [Hooks](#hooks)
 - [Step Arguments](#step-arguments)
 - [Template Steps](#template-steps)
+- [Step Results](#step-results)
 - [Filtering Tests](#filtering-tests)
   - [Tag Expressions](#tag-expressions)
   - [Predicate Filter](#predicate-filter)
 - [Annotations, Modifiers and Locks](#annotations-modifiers-and-locks)
 - [Parallelism](#parallelism)
-- [JavaScript / CommonJS Support](#javascript--commonjs-support)
+- [Reports](#reports)
+- [Entrypoints and JavaScript Support](#entrypoints-and-javascript-support)
+- [Timeouts](#timeouts)
+- [Supported Cucumber APIs](#supported-cucumber-apis)
 - [Limitations](#limitations)
 
 ---
@@ -55,9 +60,12 @@ export default defineConfig({
 import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
-    testMatch: 'cucumber.config.ts'
+    testMatch: 'cucumber.config.ts',
+    fullyParallel: true
 });
 ```
+
+> All scenarios are defined in a single test file (`cucumber.config.ts`), so without `fullyParallel: true` Playwright runs the whole suite in one worker.
 
 **3. Run tests**
 
@@ -76,7 +84,11 @@ npx playwright test
 | `paths` | `string[]` | Glob patterns for `.feature` files |
 | `require` | `string[]` | Glob patterns for step definition files (CommonJS `require`) |
 | `import` | `string[]` | Glob patterns for step definition files (ESM `import`) |
-| `requireModules` | `string[]` | Modules to require before step definitions (e.g. `ts-node/register`) |
+| `requireModules` | `string[]` | Module names or paths (resolved from the current working directory) to require before step definitions (e.g. `ts-node/register`) |
+| `worldParameters` | `unknown` | Value available in steps and hooks as `this.parameters` |
+| `tags` | `string` | Cucumber tag expression selecting scenarios to run |
+| `strict` | `boolean` | Fail scenarios with pending steps (default `true`). When `false` they are marked as `fixme` |
+| `stepLocation` | `'definition' \| 'feature'` | Location reported for steps: step definition code (default) or the step line in the `.feature` file |
 
 ```typescript
 // cucumber.config.ts
@@ -85,9 +97,18 @@ import { defineConfig } from '@qavajs/playwright-runner-adapter';
 export default defineConfig({
     paths: ['test/features/**/*.feature'],
     require: ['test/step_definitions/**/*.ts'],
-    requireModules: [],
+    requireModules: ['./test/support/setup.ts'],
+    worldParameters: { baseUrl: 'https://example.com' },
+    tags: 'not @wip',
 });
 ```
+
+Environment variables:
+
+| Variable | Description |
+|---|---|
+| `CUCUMBER_TAGS` | Tag expression combined with the `tags` option using `and`: `CUCUMBER_TAGS='@smoke' npx playwright test` |
+| `CUCUMBER_PATHS` | Comma-separated feature globs replacing `paths`: `CUCUMBER_PATHS=features/login.feature npx playwright test` |
 
 ---
 
@@ -106,17 +127,29 @@ import { TestWorld } from '@qavajs/playwright-runner-adapter';
 | `test` | `TestType` | Playwright `test` instance (default or custom) |
 | `expect` | `ExpectType` | Playwright `expect` instance (default or custom) |
 | `attach` | `function` | Attach files/data to the test report |
-| `log` | `function` | Log data to console |
-| `parameters` | `string` | Cucumber world parameters |
+| `log` | `function` | Log text to the test report (attachment named `log` on the current step) |
+| `parameters` | `unknown` | Value of the `worldParameters` config option |
 | `config` | `any` | Cucumber config object |
 | `supportCodeLibrary` | `any` | Access to the loaded support code library |
 
-**`executeStep(text, extraParam?)`** — programmatically invoke a step by its text:
+**`attach(data, mediaTypeOrOptions?)`** — same signature as in Cucumber:
+
+```typescript
+await this.attach('plain text');                                         // text/plain
+await this.attach(JSON.stringify(data), 'application/json');
+await this.attach(screenshot, { mediaType: 'image/png', fileName: 'screenshot.png' });
+await this.attach(base64Png, 'image/png;base64');                        // base64 string is decoded
+await this.attach(fs.createReadStream('report.pdf'), 'application/pdf');  // streams are supported
+```
+
+**`executeStep(text, argument?)`** — programmatically invoke a step by its text. `argument` is passed as a doc string (`string`) or data table (`string[][]` or `DataTable`); any other value is passed as an extra parameter. Each executed step is shown in the report as a nested step of the calling step, and its `{ timeout }` option applies:
 
 ```typescript
 When('composite step', async function (this: PlaywrightWorld) {
     await this.executeStep('I open the home page');
     await this.executeStep('I click "Login"');
+    await this.executeStep('I fill the form', [['username', 'alice'], ['password', 'secret']]);
+    await this.executeStep('I set the body', '{"key": "value"}');
 });
 ```
 
@@ -195,6 +228,24 @@ setWorldConstructor(MyWorld);
 ```
 
 The `init` function receives Playwright fixtures as its argument. Its signature determines which fixtures Playwright injects — list only the fixtures you need.
+
+---
+
+### Typed Steps
+
+`withWorld<World>()` returns step and hook functions with `this` typed as your world, so you don't need a `this: MyWorld` annotation in every step:
+
+```typescript
+import { withWorld } from '@qavajs/playwright-runner-adapter';
+
+const { Given, When, Then, Before, After } = withWorld<MyWorld>();
+
+When('I open {string}', async function (url: string) {
+    await this.page.goto(url); // `this` is MyWorld
+});
+```
+
+Cucumber's generic form works too: `When<MyWorld>('I open {string}', async function (url) { ... })`.
 
 ---
 
@@ -310,7 +361,45 @@ When('I log in as {string}', Template((username: string) => `
 `));
 ```
 
-Each non-empty line in the returned string is executed as an individual step against the current world. Steps run sequentially; a failure stops the sequence.
+Each non-empty line in the returned string is executed as an individual step against the current world and shown as a nested step in the report. Steps run sequentially; a failure stops the sequence.
+
+Steps in a template can have data tables and doc strings, written the same way as in feature files:
+
+```typescript
+When('I register as {string}', Template((username: string) => `
+    I fill the form
+      | username | ${username} |
+      | password | secret      |
+    I set the body
+      """
+      {"user": "${username}"}
+      """
+`));
+```
+
+---
+
+## Step Results
+
+Steps and hooks follow Cucumber semantics:
+
+- a step returning `'pending'` fails the scenario (or marks it as `fixme` with `strict: false`)
+- a step or `Before` hook returning `'skipped'` skips the rest of the scenario and marks it as skipped
+- an undefined step fails the scenario with its location in the feature file and a ready-to-paste snippet:
+
+```
+Step 'I have 5 "apples"' is not defined
+  at /project/features/cart.feature:12
+
+Implement it with the following snippet:
+
+When('I have {int} {string}', async function (int, string) {
+  // Write code here that turns the phrase above into concrete actions
+  return 'pending';
+});
+```
+
+`After` and `AfterStep` hooks receive the actual status (`PASSED`, `FAILED`, `SKIPPED`, `PENDING`, `UNDEFINED`, `AMBIGUOUS`), including failures in `Before` hooks and soft assertions.
 
 ---
 
@@ -318,7 +407,9 @@ Each non-empty line in the returned string is executed as an individual step aga
 
 ### Tag Expressions
 
-Use `tags` to translate a Cucumber tag expression into a Playwright `grep` pattern:
+The simplest way to select scenarios is the `tags` [config option](#configuration-reference) and the `CUCUMBER_TAGS` environment variable. They are evaluated against the scenario's Gherkin tags, and scenarios that don't match are not created at all.
+
+Use `tags()` to translate a Cucumber tag expression into a Playwright `grep` pattern:
 
 ```typescript
 // playwright.config.ts
@@ -331,6 +422,10 @@ export default defineConfig({
 ```
 
 Supports the full [Cucumber tag expression syntax](https://github.com/cucumber/tag-expressions): `and`, `or`, `not`, parentheses.
+
+Invalid expressions fail fast with an error naming their source (`tags()`, the `tags` option or `CUCUMBER_TAGS`). Tags written without `@` (e.g. `smoke and not @wip`) are rejected too, because they would silently match nothing.
+
+`tags()` is evaluated against Playwright's grep string (titles + tags), so, like Playwright itself, it treats `@words` in feature and scenario titles as tags. Use the `tags` config option when that matters.
 
 ### Predicate Filter
 
@@ -362,6 +457,8 @@ Gherkin tags are translated into Playwright [test details](https://playwright.de
 | `@lock(name)` | `lock: 'name'` — scenarios sharing a lock never run concurrently |
 | `@lock(-exclusive-)` | built-in exclusive lock — runs only when no other test is running |
 | `@annotation(type,description)` | `annotation: { type, description }` — description is optional: `@annotation(flaky)` |
+| `@timeout(ms)` | sets the test timeout, e.g. `@timeout(60000)`; overrides `@slow()`, the last tag wins (scenario over feature) |
+| `@retries(n)` | number of retries for all scenarios of the feature — **Feature only**, using it on a Rule or Scenario is an error |
 
 Modifiers are passed as annotations of type `skip`, `fixme`, `fail`, `slow`, which Playwright applies like `test.skip()` and the other modifiers, and the optional reason is shown in the report. Plain tags such as `@skip` or `@slow` are ordinary tags and do nothing. Tags set on a `Feature` or `Rule` apply to all its scenarios.
 
@@ -416,13 +513,31 @@ export default defineConfig({
 
 Tag scenarios that must run serially with `@serial` (or any tag of your choice) and keep everything else fully parallel.
 
+To run a single feature or scenario use `CUCUMBER_PATHS=features/login.feature npx playwright test` or `npx playwright test -g "Feature name"`. Passing a `.feature` path as a Playwright CLI argument does not work, because all scenarios are defined in `cucumber.config.ts`.
+
 > To get the current worker index inside a step, use `this.test.info().parallelIndex`.
 
 ---
 
-## JavaScript / CommonJS Support
+## Reports
 
-If your step definitions are plain JavaScript (`.js`), import from the `./js` entrypoint to avoid TypeScript overhead:
+- Scenarios are reported at their location in the `.feature` file (Scenario Outline examples point to their example row), so reporters and `--list` show `features/login.feature:12:3`.
+- Steps point to their step definition; set `stepLocation: 'feature'` to point them to the step line in the `.feature` file instead.
+- Steps are reported with a short preview of their argument: `I submit the form [DataTable: | field | value | | username | alice |]`.
+- Features with the same name in different files get the file path appended to their title to keep test titles unique.
+
+---
+
+## Entrypoints and JavaScript Support
+
+The package is compiled to CommonJS JavaScript with type declarations, so it works from TypeScript and plain JavaScript, with `require` and `import`. It has two entrypoints with the same API:
+
+| Entrypoint | Difference |
+|---|---|
+| `@qavajs/playwright-runner-adapter` | ships source maps |
+| `@qavajs/playwright-runner-adapter/js` | the same build without source maps — stack traces show the compiled `.js` files |
+
+Plain JavaScript projects don't need any TypeScript setup with either entrypoint:
 
 ```javascript
 // cucumber.config.js
@@ -438,6 +553,40 @@ module.exports = defineConfig({
 // step_definitions/steps.js
 const { Given, When, Then, PlaywrightWorld } = require('@qavajs/playwright-runner-adapter/js');
 ```
+
+---
+
+## Timeouts
+
+- The Playwright test timeout (`timeout` in `playwright.config.ts`, `@timeout(ms)` or `@slow()` tags) limits the whole scenario.
+- A step or hook `{ timeout }` option limits that single step or hook, as in Cucumber:
+
+```typescript
+When('I upload a big file', { timeout: 60_000 }, async function () { /* ... */ });
+Before({ tags: '@db', timeout: 10_000 }, async function () { /* ... */ });
+```
+
+- `setDefaultTimeout(ms)` sets the timeout for all steps and hooks without their own `{ timeout }`. Unlike Cucumber, there is no 5 second default: without `setDefaultTimeout` only the Playwright test timeout applies. `-1` disables the timeout for a definition.
+
+---
+
+## Supported Cucumber APIs
+
+| API | Supported |
+|---|---|
+| `Given` / `When` / `Then` / `defineStep` (Cucumber expressions and RegExp) | ✅ |
+| `Before` / `After` / `BeforeStep` / `AfterStep` (named, tagged) | ✅ |
+| `BeforeAll` / `AfterAll` | ✅ once per worker |
+| `setWorldConstructor` | ✅ |
+| `defineParameterType` | ✅ |
+| `setDefinitionFunctionWrapper` (incl. `wrapperOptions`) | ✅ |
+| Data tables, doc strings | ✅ |
+| Scenario Outline, Background, Rule (incl. Rule tags) | ✅ |
+| Localized Gherkin (`# language: de`) | ✅ |
+| `worldParameters`, `tags`, `strict` | ✅ |
+| `setDefaultTimeout`, step and hook `{ timeout }` option | ✅ see [Timeouts](#timeouts) |
+| `setParallelCanAssign` | ❌ see [Limitations](#limitations) |
+| Cucumber formatters (`format`) | ❌ use Playwright [reporters](https://playwright.dev/docs/test-reporters) |
 
 ---
 

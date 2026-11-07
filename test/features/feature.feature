@@ -6,7 +6,7 @@ Feature: test feature
 
   @noParallel
   Scenario: simple scenario
-    Given open 'https://google.com' url
+    Given open 'home.html' url
 
   @tag
   Scenario Outline: simple scenario <example>
@@ -14,8 +14,8 @@ Feature: test feature
 
     Examples:
       | example                    |
-      | https://www.wikipedia.org/ |
-      | https://www.saucedemo.com/ |
+      | wiki.html |
+      | shop.html |
 
   Scenario: data table
     Given data table step

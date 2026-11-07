@@ -1,5 +1,33 @@
 import { parse } from '@cucumber/tag-expressions';
 
+const OPERATORS = new Set(['and', 'or', 'not']);
+
+/**
+ * Parse cucumber tag expression with an error naming its source.
+ * Also rejects tags without `@` (e.g. `smoke`), which parse fine but never match any scenario.
+ * @param expression - tag expression
+ * @param source - where the expression comes from, used in error messages
+ */
+export function parseTagExpression(expression: string, source: string): ReturnType<typeof parse> {
+    let node: ReturnType<typeof parse>;
+    try {
+        node = parse(expression);
+    } catch (err) {
+        throw new Error(`Invalid tag expression in ${source}: ${(err as Error).message}`, { cause: err });
+    }
+    const invalidTags = expression
+        .replace(/\\./g, '')
+        .split(/[\s()]+/)
+        .filter(token => token && !OPERATORS.has(token) && !token.startsWith('@'));
+    if (invalidTags.length > 0) {
+        throw new Error(
+            `Invalid tag expression in ${source}: "${expression}". ` +
+            `Tags must start with '@': ${invalidTags.map(tag => `'${tag}' → '@${tag}'`).join(', ')}`
+        );
+    }
+    return node;
+}
+
 class TagExpression extends RegExp {
     private expressionNode: {
         evaluate(variables: string[]): boolean;
@@ -7,7 +35,7 @@ class TagExpression extends RegExp {
 
     constructor(private tagExpression: string) {
         super('');
-        this.expressionNode = parse(this.tagExpression);
+        this.expressionNode = parseTagExpression(this.tagExpression, 'tags()');
     }
 
     test(testName: string) {
