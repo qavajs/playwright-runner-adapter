@@ -22,7 +22,7 @@ export function parseTagExpression(expression: string, source: string): ReturnTy
     if (invalidTags.length > 0) {
         throw new Error(
             `Invalid tag expression in ${source}: "${expression}". ` +
-            `Tags must start with '@': ${invalidTags.map(tag => `'${tag}' → '@${tag}'`).join(', ')}`
+                `Tags must start with '@': ${invalidTags.map(tag => `'${tag}' → '@${tag}'`).join(', ')}`
         );
     }
     return node;

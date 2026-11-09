@@ -18,7 +18,11 @@ export function resolveTimeout(definition: DefinitionWithTimeout, defaultTimeout
 /**
  * Run definition code, failing with `message` if it does not complete within `timeout` milliseconds
  */
-export function runWithTimeout<T>(code: () => T | Promise<T>, timeout: number | undefined, message: string): Promise<T> {
+export function runWithTimeout<T>(
+    code: () => T | Promise<T>,
+    timeout: number | undefined,
+    message: string
+): Promise<T> {
     const promise = Promise.resolve().then(code);
     if (timeout === undefined) return promise;
     return wrapPromiseWithTimeout(promise, timeout, message.replace('{timeout}', String(timeout)));

@@ -11,7 +11,7 @@ import type { CucumberAdapterConfig, Feature, SupportCodeLibrary } from './types
 const uuidFn = () => randomUUID();
 const builder = new AstBuilder(uuidFn);
 const matcher = new GherkinClassicTokenMatcher();
-const parser = new Parser(builder, matcher)
+const parser = new Parser(builder, matcher);
 
 function duplicates(tests: readonly Pickle[]) {
     const counts: Record<string, number> = {};
@@ -46,7 +46,7 @@ export function loadFeatures(globPattern: string[]): Feature[] {
             uri: filePath,
             gherkinDocument,
             tests: duplicates(compile(gherkinDocument, relative(process.cwd(), filePath), uuidFn))
-        }
+        };
     });
 }
 
@@ -73,8 +73,7 @@ export function loadStepDefinitions(globPattern: string[], requireModules: strin
 }
 
 export function load(config: CucumberAdapterConfig): { features: Feature[]; supportCodeLibrary: SupportCodeLibrary } {
-    const envPaths = process.env.CUCUMBER_PATHS
-        ?.split(',')
+    const envPaths = process.env.CUCUMBER_PATHS?.split(',')
         .map(path => path.trim())
         .filter(Boolean);
     const features = loadFeatures(envPaths?.length ? envPaths : config.paths);
@@ -82,5 +81,5 @@ export function load(config: CucumberAdapterConfig): { features: Feature[]; supp
         [...(config.require ?? []), ...(config.import ?? [])],
         config.requireModules ?? []
     );
-    return { features, supportCodeLibrary }
+    return { features, supportCodeLibrary };
 }

@@ -10,11 +10,11 @@ import {
     AfterStep,
     BeforeAll,
     AfterAll,
-    ITestCaseHookParameter,
-    ITestStepHookParameter,
+    type ITestCaseHookParameter,
+    type ITestStepHookParameter,
     PlaywrightWorld, Template
 } from '../../adapter';
-import { test as base, expect as baseExpect, Page } from '@playwright/test';
+import { test as base, expect as baseExpect, type Page } from '@playwright/test';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -298,4 +298,57 @@ When('step that takes 500 ms with 100 ms timeout', { timeout: 100 }, async funct
 
 Before({ tags: '@slowBeforeHook', timeout: 100 }, async function () {
     await sleep(500);
+});
+
+const hugeLine = (i: number) => `line ${i}: the quick brown fox jumps over the lazy dog | "quoted" 'single' {braces} <angle> ✓`;
+const hugeLines = Array.from({ length: 10 }, (_, i) => hugeLine(i + 1));
+const hugeTable = [
+    Array.from({ length: 5 }, (_, c) => `col${c + 1}`),
+    ...Array.from({ length: 9 }, (_, r) => Array.from({ length: 5 }, (_, c) => `r${r + 1}c${c + 1}`))
+];
+
+When('huge multiline step with {int} lines', async function (this: ExtendedPlaywrightWorld, count: number, multiline: string) {
+    const lines = multiline.split('\n');
+    this.expect(lines).toHaveLength(count);
+    lines.forEach((line, i) => {
+        this.expect(line).toBe(hugeLine(i + 1));
+    });
+});
+
+When('huge data table step with {int} rows and {int} columns', async function (this: ExtendedPlaywrightWorld, rowCount: number, colCount: number, dataTable: DataTable) {
+    const raw = dataTable.raw();
+    this.expect(raw).toHaveLength(rowCount + 1);
+    this.expect(raw[0]).toEqual(Array.from({ length: colCount }, (_, c) => `col${c + 1}`));
+    const hashes = dataTable.hashes();
+    this.expect(hashes).toHaveLength(rowCount);
+    hashes.forEach((row, r) => {
+        this.expect(Object.keys(row)).toHaveLength(colCount);
+        for (let c = 1; c <= colCount; c++) {
+            this.expect(row[`col${c}`]).toBe(`r${r + 1}c${c}`);
+        }
+    });
+});
+
+When('huge arguments via execute step', async function (this: ExtendedPlaywrightWorld) {
+    await this.executeStep('huge multiline step with 10 lines', hugeLines.join('\n'));
+    await this.executeStep('huge data table step with 9 rows and 5 columns', hugeTable);
+    await this.executeStep('huge data table step with 9 rows and 5 columns', new DataTable(hugeTable));
+});
+
+When('huge arguments via template', Template(() => `
+    huge multiline step with 10 lines
+      """
+${hugeLines.map(line => `      ${line}`).join('\n')}
+      """
+    huge data table step with 9 rows and 5 columns
+${hugeTable.map(row => `      | ${row.join(' | ')} |`).join('\n')}
+`));
+
+When('pending step via template', Template(() => `
+    pending step
+    fail
+`));
+
+When('skipped step via execute step', async function (this: ExtendedPlaywrightWorld) {
+    return this.executeStep('skipped step');
 });

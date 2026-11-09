@@ -3,3 +3,4 @@ adapter/
 playwright-report/
 test-results/
 test/report/
+.DS_Store

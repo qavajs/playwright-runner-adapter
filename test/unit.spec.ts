@@ -4,6 +4,8 @@ import { PickleStepType } from '@cucumber/messages';
 import { tags, filter, resolveTestDetails, resolveRetries, parseTemplate, createTagFilter, DataTable } from '../adapter';
 import { buildSnippet, stepTitle, toPickleArgument } from '../adapter/gherkin';
 import { resolveTimeout, runWithTimeout } from '../adapter/timeout';
+import { ScenarioRunner } from '../adapter/scenarioRunner';
+import type { Feature, HookDefinition, StepDefinitionMatch, SupportCodeLibrary } from '../adapter/types';
 
 test.describe('tags()', () => {
     test('matches single tag', () => {
@@ -267,5 +269,210 @@ test.describe('timeouts', () => {
             .rejects.toThrow('slow after 20 ms');
         await expect(runWithTimeout(() => 'done', 20, '')).resolves.toBe('done');
         await expect(runWithTimeout(() => { throw new Error('sync'); }, undefined, '')).rejects.toThrow('sync');
+    });
+});
+
+test.describe('ScenarioRunner', () => {
+    type HookPayload = { result?: { status: string; duration: number; message?: string } };
+
+    function createRunner(options: {
+        /** step definitions */
+        steps: Record<string, () => unknown>;
+        /** step texts of the scenario, defaults to the step definitions */
+        scenario?: string[];
+        before?: HookDefinition[];
+        after?: HookDefinition[];
+        beforeStep?: HookDefinition[];
+        afterStep?: HookDefinition[];
+    }) {
+        const testInfo = { errors: [] as { message?: string }[], expectedStatus: 'passed' };
+        const skippedSteps: string[] = [];
+        const step = Object.assign(async (_title: string, body: () => unknown) => body(), {
+            skip: async (title: string) => { skippedSteps.push(title); }
+        });
+        const fakeTest = { step, info: () => testInfo, skip: () => {}, fixme: () => {} };
+        const stepDefinitions: StepDefinitionMatch[] = Object.entries(options.steps).map(([text, code]) => ({
+            line: 1,
+            pattern: text,
+            code,
+            matchesStepName: (name: string) => name === text,
+            getInvocationParameters: async () => ({ parameters: [] })
+        }));
+        const supportCodeLibrary = {
+            stepDefinitions,
+            parameterTypeRegistry: new ParameterTypeRegistry(),
+            beforeTestRunHookDefinitions: [],
+            afterTestRunHookDefinitions: [],
+            beforeTestCaseHookDefinitions: options.before ?? [],
+            afterTestCaseHookDefinitions: options.after ?? [],
+            beforeTestStepHookDefinitions: options.beforeStep ?? [],
+            afterTestStepHookDefinitions: options.afterStep ?? []
+        } as unknown as SupportCodeLibrary;
+        const testCase = {
+            id: '1',
+            uri: 'test.feature',
+            name: 'scenario',
+            language: 'en',
+            astNodeIds: [],
+            tags: [],
+            steps: (options.scenario ?? Object.keys(options.steps))
+                .map((text, i) => ({ id: String(i), text, astNodeIds: [], type: PickleStepType.ACTION }))
+        };
+        const feature = { uri: 'test.feature', gherkinDocument: { comments: [] }, tests: [testCase] } as unknown as Feature;
+        const runner = new ScenarioRunner({
+            test: fakeTest as any,
+            supportCodeLibrary,
+            feature,
+            positions: new Map(),
+            testCase,
+            world: { test: fakeTest as any, init: () => {} },
+            strict: true,
+            stepLocation: 'definition'
+        });
+        return { runner, testInfo, skippedSteps };
+    }
+
+    function hook(code: (payload: HookPayload) => unknown): HookDefinition {
+        return { line: 1, code: code as HookDefinition['code'], appliesToTestCase: () => true };
+    }
+
+    test('runs all After hooks when one of them fails', async () => {
+        const results: string[] = [];
+        const { runner } = createRunner({
+            steps: { 'passing step': () => {} },
+            // After hooks run in reverse definition order, so the failing one runs first
+            after: [
+                hook(payload => { results.push(payload.result!.status); }),
+                hook(() => { throw new Error('first after hook'); })
+            ]
+        });
+        await expect(runner.run()).rejects.toThrow('first after hook');
+        expect(results).toEqual(['FAILED']);
+    });
+
+    test('runs Before hooks in definition order and After hooks in reverse order', async () => {
+        const calls: string[] = [];
+        const record = (name: string) => hook(() => { calls.push(name); });
+        const { runner } = createRunner({
+            steps: { 'some step': () => { calls.push('step'); } },
+            before: [record('before 1'), record('before 2')],
+            beforeStep: [record('before step 1'), record('before step 2')],
+            afterStep: [record('after step 1'), record('after step 2')],
+            after: [record('after 1'), record('after 2')]
+        });
+        await runner.run();
+        expect(calls).toEqual([
+            'before 1',
+            'before 2',
+            'before step 1',
+            'before step 2',
+            'step',
+            'after step 2',
+            'after step 1',
+            'after 2',
+            'after 1'
+        ]);
+    });
+
+    test('reports scenario error rather than a later After hook error', async () => {
+        const messages: (string | undefined)[] = [];
+        const { runner } = createRunner({
+            steps: { 'failing step': () => { throw new Error('step error'); } },
+            after: [
+                hook(payload => { messages.push(payload.result!.message); throw new Error('after hook error'); }),
+                hook(payload => { messages.push(payload.result!.message); })
+            ]
+        });
+        await expect(runner.run()).rejects.toThrow('step error');
+        expect(messages).toEqual(['step error', 'step error']);
+    });
+
+    test('AfterStep hook receives result of its step', async () => {
+        const results: { status: string; duration: number }[] = [];
+        const { runner, testInfo } = createRunner({
+            steps: {
+                'slow step': () => new Promise(resolve => setTimeout(resolve, 100)),
+                'soft failing step': () => { testInfo.errors.push({ message: 'soft error' }); },
+                'fast step': () => {}
+            },
+            afterStep: [hook(payload => { results.push(payload.result!); })]
+        });
+        await runner.run();
+        expect(results.map(result => result.status)).toEqual(['PASSED', 'FAILED', 'PASSED']);
+        expect(results[0].duration).toBeGreaterThanOrEqual(90);
+        expect(results[2].duration).toBeLessThan(50);
+    });
+
+    test('runs all BeforeStep and AfterStep hooks but not the step when BeforeStep hook fails', async () => {
+        const calls: string[] = [];
+        const { runner } = createRunner({
+            steps: { 'some step': () => { calls.push('step'); } },
+            beforeStep: [
+                hook(() => { calls.push('before step 1'); throw new Error('before step error'); }),
+                hook(() => { calls.push('before step 2'); })
+            ],
+            afterStep: [hook(payload => { calls.push(`after step ${payload.result!.status}`); })]
+        });
+        await expect(runner.run()).rejects.toThrow('before step error');
+        expect(calls).toEqual(['before step 1', 'before step 2', 'after step FAILED']);
+    });
+
+    test('Before hook failure stops remaining Before hooks and steps, After hooks still run', async () => {
+        const calls: string[] = [];
+        const { runner, skippedSteps } = createRunner({
+            steps: { 'some step': () => { calls.push('step'); } },
+            before: [
+                hook(() => { throw new Error('before error'); }),
+                hook(() => { calls.push('before 2'); })
+            ],
+            after: [hook(payload => { calls.push(`after ${payload.result!.status}`); })]
+        });
+        await expect(runner.run()).rejects.toThrow('before error');
+        expect(calls).toEqual(['after FAILED']);
+        expect(skippedSteps).toEqual(['some step']);
+    });
+
+    test('Before hook returning skipped stops remaining Before hooks and skips the scenario', async () => {
+        const calls: string[] = [];
+        const { runner, skippedSteps } = createRunner({
+            steps: { 'some step': () => { calls.push('step'); } },
+            before: [
+                hook(() => 'skipped'),
+                hook(() => { calls.push('before 2'); })
+            ],
+            after: [hook(payload => { calls.push(`after ${payload.result!.status}`); })]
+        });
+        await runner.run();
+        expect(calls).toEqual(['after SKIPPED']);
+        expect(skippedSteps).toEqual(['some step']);
+    });
+
+    test('reports steps after a failed step as skipped', async () => {
+        const { runner, skippedSteps } = createRunner({
+            steps: {
+                'first step': () => {},
+                'failing step': () => { throw new Error('step error'); },
+                'third step': () => {},
+                'fourth step': () => {}
+            }
+        });
+        await expect(runner.run()).rejects.toThrow('step error');
+        expect(skippedSteps).toEqual(['third step', 'fourth step']);
+    });
+
+    test('undefined step error lists all undefined steps of the scenario with snippets', async () => {
+        const { runner, skippedSteps } = createRunner({
+            steps: { 'defined step': () => {} },
+            scenario: ['first undefined step', 'defined step', 'I have 5 apples']
+        });
+        const error = await runner.run().catch((err: Error) => err);
+        expect(error).toBeInstanceOf(Error);
+        const message = (error as Error).message;
+        expect(message).toContain(`Step 'first undefined step' is not defined`);
+        expect(message).toContain(`Step 'I have 5 apples' is not defined`);
+        expect(message).toContain('Implement them with the following snippets:');
+        expect(message).toContain(`When('first undefined step'`);
+        expect(message).toContain(`When('I have {int} apples'`);
+        expect(skippedSteps).toEqual(['defined step', 'I have 5 apples']);
     });
 });

@@ -1,6 +1,6 @@
 {
   "name": "@qavajs/playwright-runner-adapter",
-  "version": "2.5.0",
+  "version": "2.6.0",
   "description": "adapter for playwright test runner",
   "main": "adapter/index.js",
   "types": "adapter/index.d.ts",
@@ -27,6 +27,8 @@
   ],
   "scripts": {
     "build": "tsc && tsc --project tsconfig.js.json",
+    "lint": "biome check",
+    "lint:fix": "biome check --write",
     "test:ui": "playwright test --config test/playwright.config.ts --ui",
     "test:e2e": "playwright test --config test/playwright.config.ts --project parallel --project serial --project unit",
     "test:all": "playwright test --config test/playwright.config.ts",
@@ -48,6 +50,7 @@
     "@cucumber/tag-expressions": "^11.0.1"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.6.3",
     "@playwright/test": "^1.65.0",
     "@qavajs/playwright-console-reporter": "^0.1.0",
     "@types/node": "^26.6.6",

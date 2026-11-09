@@ -58,5 +58,14 @@ export interface TypedSupportCode<World> {
  * });
  */
 export function withWorld<World>(): TypedSupportCode<World> {
-    return { Given, When, Then, defineStep, Before, After, BeforeStep, AfterStep } as unknown as TypedSupportCode<World>;
+    return {
+        Given,
+        When,
+        Then,
+        defineStep,
+        Before,
+        After,
+        BeforeStep,
+        AfterStep
+    } as unknown as TypedSupportCode<World>;
 }

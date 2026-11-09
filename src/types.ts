@@ -34,10 +34,10 @@ export type AttachData = string | Buffer | Readable;
 
 export type AttachFn = (data: AttachData, mediaTypeOrOptions?: string | AttachOptions) => Promise<void>;
 
-export interface WorldOptions {
+export interface WorldOptions<Parameters = unknown> {
     log?: (data: unknown) => void;
     attach?: AttachFn;
-    parameters?: unknown;
+    parameters?: Parameters;
     supportCodeLibrary?: SupportCodeLibrary;
     config?: CucumberAdapterConfig;
 }

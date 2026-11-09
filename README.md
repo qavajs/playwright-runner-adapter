@@ -128,7 +128,7 @@ import { TestWorld } from '@qavajs/playwright-runner-adapter';
 | `expect` | `ExpectType` | Playwright `expect` instance (default or custom) |
 | `attach` | `function` | Attach files/data to the test report |
 | `log` | `function` | Log text to the test report (attachment named `log` on the current step) |
-| `parameters` | `unknown` | Value of the `worldParameters` config option |
+| `parameters` | `Parameters` (`unknown` by default) | Value of the `worldParameters` config option; type it with `PlaywrightWorld<MyParameters>` |
 | `config` | `any` | Cucumber config object |
 | `supportCodeLibrary` | `any` | Access to the loaded support code library |
 
@@ -152,6 +152,8 @@ When('composite step', async function (this: PlaywrightWorld) {
     await this.executeStep('I set the body', '{"key": "value"}');
 });
 ```
+
+`executeStep` returns the value returned by the step. Return it from the calling step to pass on `'pending'` or `'skipped'` (`return this.executeStep('...')`). `BeforeStep` / `AfterStep` hooks don't run for executed steps.
 
 ---
 
@@ -228,6 +230,8 @@ setWorldConstructor(MyWorld);
 ```
 
 The `init` function receives Playwright fixtures as its argument. Its signature determines which fixtures Playwright injects — list only the fixtures you need.
+
+Each scenario gets a new world instance. The adapter also creates one world when the config is loaded (once per worker) to read `test` and the `init` signature, so keep the constructor free of side effects such as opening connections — do that in `init` or a `Before` hook.
 
 ---
 
@@ -361,7 +365,7 @@ When('I log in as {string}', Template((username: string) => `
 `));
 ```
 
-Each non-empty line in the returned string is executed as an individual step against the current world and shown as a nested step in the report. Steps run sequentially; a failure stops the sequence.
+Each non-empty line in the returned string is executed as an individual step against the current world and shown as a nested step in the report. Steps run sequentially; a failure stops the sequence. A step returning `'pending'` or `'skipped'` also stops the sequence, and the template step returns that value, so the scenario becomes pending or skipped.
 
 Steps in a template can have data tables and doc strings, written the same way as in feature files:
 
@@ -385,7 +389,8 @@ Steps and hooks follow Cucumber semantics:
 
 - a step returning `'pending'` fails the scenario (or marks it as `fixme` with `strict: false`)
 - a step or `Before` hook returning `'skipped'` skips the rest of the scenario and marks it as skipped
-- an undefined step fails the scenario with its location in the feature file and a ready-to-paste snippet:
+- steps that didn't run because of a failed, skipped or pending step (or `Before` hook) are shown in the report as skipped steps
+- an undefined step fails the scenario with its location in the feature file and a ready-to-paste snippet; if the scenario has more undefined steps, all of them are listed with their snippets:
 
 ```
 Step 'I have 5 "apples"' is not defined
@@ -399,7 +404,15 @@ When('I have {int} {string}', async function (int, string) {
 });
 ```
 
-`After` and `AfterStep` hooks receive the actual status (`PASSED`, `FAILED`, `SKIPPED`, `PENDING`, `UNDEFINED`, `AMBIGUOUS`), including failures in `Before` hooks and soft assertions.
+`After` and `AfterStep` hooks receive the actual status (`PASSED`, `FAILED`, `SKIPPED`, `PENDING`, `UNDEFINED`, `AMBIGUOUS`), including failures in `Before` hooks and soft assertions. `AfterStep` receives the result of its own step (status and duration); `After` receives the result of the scenario.
+
+Hook order and failures follow Cucumber as well:
+
+- `Before`, `BeforeStep` and `BeforeAll` hooks run in definition order; `After`, `AfterStep` and `AfterAll` hooks run in reverse definition order, so cleanup mirrors setup
+- a failing `Before` hook, or one returning `'skipped'`, stops the remaining `Before` hooks and the steps
+- all `After`, `BeforeStep` and `AfterStep` hooks run even if one of them fails, so cleanup code is not skipped
+- when a `BeforeStep` hook fails, the step is not run, but its `AfterStep` hooks are
+- the first error is the one reported for the test; an `After` hook failing after a failed step doesn't replace the step's error
 
 ---
 
