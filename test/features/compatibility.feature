@@ -59,3 +59,13 @@ Feature: cucumber compatibility
 
   Scenario: default timeout is applied only when set explicitly
     Then default timeout is 20000
+
+  @statusCheck(PENDING) @fail()
+  Scenario: pending step inside template stops the template
+    When pending step via template
+    Then fail
+
+  @statusCheck(SKIPPED)
+  Scenario: skipped step returned from executeStep skips scenario
+    When skipped step via execute step
+    Then fail

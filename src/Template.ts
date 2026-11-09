@@ -9,9 +9,7 @@ const DOC_STRING_DELIMITERS = ['"""', '```'];
 
 function parseRow(line: string): string[] {
     const content = line.replace(/^\|/, '').replace(/(?<!\\)\|$/, '');
-    return content
-        .split(/(?<!\\)\|/)
-        .map(cell => cell.trim().replace(/\\\|/g, '|'));
+    return content.split(/(?<!\\)\|/).map(cell => cell.trim().replace(/\\\|/g, '|'));
 }
 
 function stripIndent(line: string, indent: number): string {
@@ -58,7 +56,9 @@ export function parseTemplate(scenario: string): TemplateStep[] {
 }
 
 /**
- * Define template step
+ * Define template step.
+ * Steps run one by one; a step returning `'pending'` or `'skipped'` stops the template
+ * and the template step returns the same value.
  * @param {string} scenario - multiline string with steps; steps can have data tables and doc strings
  * @example
  * When('I click {string} and verify {string}', Template((locator, expected) => `
@@ -70,10 +70,11 @@ export function parseTemplate(scenario: string): TemplateStep[] {
  */
 export function Template(scenario: (...args: any[]) => string) {
     return new Proxy(scenario, {
-        apply: async function (template: (...args: unknown[]) => string, world: TestWorld, args: unknown[]) {
+        apply: async (template: (...args: unknown[]) => string, world: TestWorld, args: unknown[]) => {
             for (const step of parseTemplate(template(...args))) {
-                await world.executeStep(step.text, step.argument);
+                const returned = await world.executeStep(step.text, step.argument);
+                if (returned === 'pending' || returned === 'skipped') return returned;
             }
-        },
+        }
     });
 }

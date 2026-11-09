@@ -9,7 +9,7 @@ export interface SourceLocation {
     column: number;
 }
 
-type Position = Omit<SourceLocation, 'file'>;
+export type Position = Omit<SourceLocation, 'file'>;
 
 const PREVIEW_LENGTH = 50;
 
@@ -75,10 +75,11 @@ export function callAt<T>(location: SourceLocation | undefined, fn: (...args: an
 }
 
 function preview(text: string): string {
-    const singleLine = text.replace(/\s*\n\s*/g, ' ↵ ').replace(/\s+/g, ' ').trim();
-    return singleLine.length > PREVIEW_LENGTH
-        ? `${singleLine.slice(0, PREVIEW_LENGTH - 1)}…`
-        : singleLine;
+    const singleLine = text
+        .replace(/\s*\n\s*/g, ' ↵ ')
+        .replace(/\s+/g, ' ')
+        .trim();
+    return singleLine.length > PREVIEW_LENGTH ? `${singleLine.slice(0, PREVIEW_LENGTH - 1)}…` : singleLine;
 }
 
 /**
@@ -137,8 +138,12 @@ export function buildSnippet(
     pickleStep: PickleStep
 ): string | undefined {
     try {
-        const { default: SnippetBuilder } = require('@cucumber/cucumber/lib/formatter/step_definition_snippet_builder/index');
-        const { default: SnippetSyntax } = require('@cucumber/cucumber/lib/formatter/step_definition_snippet_builder/javascript_snippet_syntax');
+        const {
+            default: SnippetBuilder
+        } = require('@cucumber/cucumber/lib/formatter/step_definition_snippet_builder/index');
+        const {
+            default: SnippetSyntax
+        } = require('@cucumber/cucumber/lib/formatter/step_definition_snippet_builder/javascript_snippet_syntax');
         const builder = new SnippetBuilder({
             snippetSyntax: new SnippetSyntax('async-await'),
             parameterTypeRegistry: supportCodeLibrary.parameterTypeRegistry

@@ -14,6 +14,22 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 :microscope: - experimental
 
+## [2.6.0]
+- :beetle: all `After`, `BeforeStep` and `AfterStep` hooks run even if one of them fails (previously the first failure skipped the rest)
+- :beetle: an `After` / `AfterStep` hook failure no longer replaces the error of the failed step in the report
+- :beetle: `AfterStep` hooks receive the result of their own step (status and duration) instead of the scenario result
+- :beetle: `AfterStep` hooks run when a `BeforeStep` hook fails; the step itself is not run
+- :rocket: `executeStep` returns the step's return value and `Template` stops on `'pending'` / `'skipped'` and returns it, so nested steps can make the scenario pending or skipped
+- :rocket: `TestWorld` / `PlaywrightWorld` accept a type parameter for `this.parameters`, e.g. `PlaywrightWorld<{ baseUrl: string }>`
+- :beetle: a `Before` hook returning `'skipped'` stops the remaining `Before` hooks
+- :beetle: `After`, `AfterStep` and `AfterAll` hooks run in reverse definition order, as in Cucumber (previously definition order)
+- :rocket: steps that didn't run (after a failed, skipped or pending step or `Before` hook) are shown as skipped steps in the report
+- :rocket: undefined step error lists all undefined steps of the scenario with a snippet for each
+- :rocket: `executeStep` errors for undefined and ambiguous steps match scenario steps: snippet for undefined steps, patterns for ambiguous ones
+- :pencil: scenario execution moved to `ScenarioRunner` (`src/scenarioRunner.ts`) with unit tests
+- :pencil: added Biome linter / formatter (`npm run lint`), run in CI; test files are linted, not formatted
+- :pencil: e2e checks for hook failure semantics (`test/features/hookFailures.feature`); the adapter's own tests retry only on CI
+
 ## [2.5.0]
 - :beetle: `requireModules` are now required as modules (e.g. `ts-node/register`) resolved from the current working directory instead of being treated as globs
 - :beetle: `worldParameters` config option is passed to the world as `this.parameters`
