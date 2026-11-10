@@ -4,7 +4,8 @@ import { inspect } from 'node:util';
 import { parseTagExpression } from './filter';
 import { load } from './loader';
 import { resolveRetries, resolveTestDetails } from './testDetails';
-import { callAt, collectPositions, featureTitle, resolveLocation } from './gherkin';
+import { fixtureNames, withFixtures } from './fixtures';
+import { callAt, callerLocation, collectPositions, featureTitle } from './gherkin';
 import { getLine, HOOK_NAMES, invokeHook, reversed, ScenarioRunner, type AnyTestType } from './scenarioRunner';
 import type { TestInfo } from '@playwright/test';
 import type { Pickle } from '@cucumber/messages';
@@ -130,6 +131,10 @@ function uniqueFeatureTitles(features: Feature[]): string[] {
 }
 
 export function defineConfig(config: CucumberAdapterConfig): void {
+    // Tests are located at the `defineConfig` call, so playwright keeps the config file as the file of the tests.
+    // With all tests located in one other file of a different extension (e.g. a feature or adapter file)
+    // playwright treats that file as the test file, and UI mode, which filters by test file, runs nothing.
+    const configLocation = callerLocation(defineConfig);
     const { features, supportCodeLibrary } = load(config);
     const strict = config.strict ?? true;
     const stepLocation = config.stepLocation ?? 'definition';
@@ -150,7 +155,7 @@ export function defineConfig(config: CucumberAdapterConfig): void {
     // Scenarios get their own world instance.
     const prototypeWorld = new supportCodeLibrary.World(worldOptions) as WorldBase;
     const test = prototypeWorld.test as AnyTestType;
-    const fixturesSignature = prototypeWorld.init.toString();
+    const fixtures = fixtureNames(prototypeWorld.init);
 
     registerRunHooks(
         test,
@@ -169,20 +174,16 @@ export function defineConfig(config: CucumberAdapterConfig): void {
         const featureTags = featureNode?.tags ?? [];
         const retries = resolveRetries(featureTags);
         assertRetriesOnFeatureOnly(feature, featureTags);
-        const featureLocation = featureNode
-            ? { file: feature.uri, ...featureNode.location, column: featureNode.location.column ?? 1 }
-            : undefined;
-
-        callAt(featureLocation, test.describe, [
+        callAt(configLocation, test.describe, [
             titles[featureIndex],
             () => {
                 if (retries !== undefined) test.describe.configure({ retries });
 
                 for (const testCase of tests) {
                     const { tag, annotation, lock, timeout } = resolveTestDetails(testCase);
-                    const testBody = async (fixtures: Record<string, unknown>) => {
+                    const testBody = withFixtures(fixtures, async testFixtures => {
                         const world = new supportCodeLibrary.World(worldOptions);
-                        world.init(fixtures);
+                        world.init(testFixtures);
                         if (timeout !== undefined) world.test.info().setTimeout(timeout);
                         await new ScenarioRunner({
                             test,
@@ -195,12 +196,9 @@ export function defineConfig(config: CucumberAdapterConfig): void {
                             stepLocation,
                             defaultTimeout
                         }).run();
-                    };
-                    // Playwright reads requested fixtures from the destructured parameter of the test function
-                    testBody.toString = () => fixturesSignature;
+                    });
                     const details = lock.length > 0 ? { tag, annotation, lock } : { tag, annotation };
-                    const testLocation = resolveLocation(positions, feature.uri, testCase.astNodeIds);
-                    callAt(testLocation, test, [testCase.name, details, testBody]);
+                    callAt(configLocation, test, [testCase.name, details, testBody]);
                 }
             }
         ]);

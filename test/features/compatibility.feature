@@ -46,9 +46,6 @@ Feature: cucumber compatibility
   Scenario: template with data table and doc string
     When template with arguments
 
-  Scenario: test location points to feature file
-    Then test location is line 49 of 'compatibility.feature'
-
   @statusCheck(FAILED) @messageCheck(timed-out) @fail()
   Scenario: step timeout option
     When step that takes 500 ms with 100 ms timeout

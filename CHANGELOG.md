@@ -14,6 +14,11 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 :microscope: - experimental
 
+## [2.6.1]
+- :x: reverted reporting tests and describe blocks at their location in the `.feature` file (added in 2.5.0): with a single feature file Playwright treated the `.feature` file as the test file, and UI mode ran nothing
+- :beetle: tests and describe blocks are located at the `defineConfig(...)` call in the config file. Previously they pointed to the adapter's own file, and when its extension differed from the config file's (e.g. ESM `.js` config, or `.ts` config with the `./js` entrypoint), UI mode ran nothing. Step locations (`stepLocation`) are unchanged
+- :pencil: fixtures requested by world `init` are read once at load, and each scenario gets a test function that destructures them, instead of overriding the test function's `toString`. Invalid `init` signatures (no destructuring, rest property) fail at load with a clear error
+
 ## [2.6.0]
 - :beetle: all `After`, `BeforeStep` and `AfterStep` hooks run even if one of them fails (previously the first failure skipped the rest)
 - :beetle: an `After` / `AfterStep` hook failure no longer replaces the error of the failed step in the report

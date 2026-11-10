@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url';
 import { runInThisContext } from 'node:vm';
 import { DataTable } from '@cucumber/cucumber';
 import type { GherkinDocument, PickleStep, PickleStepArgument, Scenario, Step } from '@cucumber/messages';
@@ -58,9 +59,30 @@ export function resolveLocation(
 }
 
 /**
+ * Location of the code that called `fn`, e.g. the `defineConfig(...)` call in the config file
+ */
+export function callerLocation(fn: (...args: any[]) => unknown): SourceLocation | undefined {
+    const originalPrepare = Error.prepareStackTrace;
+    const holder: { stack?: NodeJS.CallSite[] } = {};
+    try {
+        Error.prepareStackTrace = (_, callSites) => callSites;
+        Error.captureStackTrace(holder, fn);
+        const callSite = holder.stack?.[0];
+        const file = callSite?.getFileName();
+        if (!callSite || !file) return undefined;
+        return {
+            file: file.startsWith('file://') ? fileURLToPath(file) : file,
+            line: callSite.getLineNumber() ?? 1,
+            column: callSite.getColumnNumber() ?? 1
+        };
+    } finally {
+        Error.prepareStackTrace = originalPrepare;
+    }
+}
+
+/**
  * Call function so that the immediate caller frame reports the given source location.
- * Playwright takes test and describe locations from the caller frame,
- * so this makes reports, `--list` and IDE integrations point to the feature file instead of the adapter.
+ * Playwright takes test and describe locations from the caller frame.
  */
 export function callAt<T>(location: SourceLocation | undefined, fn: (...args: any[]) => T, args: unknown[]): T {
     if (!location) return fn(...args);

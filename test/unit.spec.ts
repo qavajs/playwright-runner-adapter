@@ -1,9 +1,11 @@
+import { execFileSync } from 'node:child_process';
 import { test, expect } from '@playwright/test';
 import { ParameterTypeRegistry } from '@cucumber/cucumber-expressions';
 import { PickleStepType } from '@cucumber/messages';
 import { tags, filter, resolveTestDetails, resolveRetries, parseTemplate, createTagFilter, DataTable } from '../adapter';
 import { buildSnippet, stepTitle, toPickleArgument } from '../adapter/gherkin';
 import { resolveTimeout, runWithTimeout } from '../adapter/timeout';
+import { fixtureNames, withFixtures } from '../adapter/fixtures';
 import { ScenarioRunner } from '../adapter/scenarioRunner';
 import type { Feature, HookDefinition, StepDefinitionMatch, SupportCodeLibrary } from '../adapter/types';
 
@@ -474,5 +476,71 @@ test.describe('ScenarioRunner', () => {
         expect(message).toContain(`When('first undefined step'`);
         expect(message).toContain(`When('I have {int} apples'`);
         expect(skippedSteps).toEqual(['defined step', 'I have 5 apples']);
+    });
+});
+
+test.describe('config file suite', () => {
+    test('is the config file when all scenarios come from one feature file', () => {
+        // UI mode runs tests filtered by their file suite location, so it must be a file playwright loads
+        const output = execFileSync(
+            process.execPath,
+            [
+                require.resolve('@playwright/test/cli'),
+                'test',
+                '--config',
+                'test/singleFeature/playwright.config.ts',
+                '--list',
+                '--reporter=json'
+            ],
+            { encoding: 'utf-8', env: { ...process.env, CUCUMBER_PATHS: '', CUCUMBER_TAGS: '' } }
+        );
+        const report = JSON.parse(output);
+        expect(report.suites.map((suite: { file: string }) => suite.file)).toEqual(['singleFeature.config.ts']);
+        const specFiles = report.suites[0].suites.flatMap((suite: { specs: { file: string }[] }) =>
+            suite.specs.map(spec => spec.file)
+        );
+        expect(new Set(specFiles)).toEqual(new Set(['singleFeature.config.ts']));
+    });
+});
+
+test.describe('fixtureNames()', () => {
+    test('reads destructured fixtures of arrow, function and method init', () => {
+        expect(fixtureNames(({ page, context }: any) => [page, context])).toEqual(['page', 'context']);
+        expect(fixtureNames(function ({ browser }: any) { return browser; })).toEqual(['browser']);
+        const world = { init({ request }: any) { return request; } };
+        expect(fixtureNames(world.init)).toEqual(['request']);
+    });
+
+    test('handles renames, defaults, nested patterns and comments', () => {
+        const init = (
+            {
+                page: p, // the page
+                /* settings */ settings = { a: 1, b: [1, 2] },
+                user: { name }
+            }: any
+        ) => [p, settings, name];
+        expect(fixtureNames(init)).toEqual(['page', 'settings', 'user']);
+    });
+
+    test('returns no fixtures for init without parameters', () => {
+        expect(fixtureNames(() => {})).toEqual([]);
+    });
+
+    test('rejects init without destructuring or with rest property', () => {
+        expect(() => fixtureNames((fixtures: any) => fixtures)).toThrow('must destructure');
+        expect(() => fixtureNames(((fixtures: any) => fixtures) as any)).toThrow('must destructure');
+        expect(() => fixtureNames(({ page, ...rest }: any) => [page, rest])).toThrow('rest property');
+    });
+});
+
+test.describe('withFixtures()', () => {
+    test('creates function destructuring the fixtures and passes all fixtures to run', async () => {
+        let received: unknown;
+        const fn = withFixtures(['page', 'context'], async fixtures => {
+            received = fixtures;
+        });
+        expect(Function.prototype.toString.call(fn)).toContain('async function ({ page, context })');
+        await fn({ page: 1, context: 2 });
+        expect(received).toEqual({ page: 1, context: 2 });
     });
 });
