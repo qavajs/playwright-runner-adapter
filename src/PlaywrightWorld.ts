@@ -74,7 +74,7 @@ export class PlaywrightWorld<Parameters = unknown> extends TestWorld<Parameters>
     browserName!: string;
     request!: APIRequestContext;
 
-    // Cast preserves the destructured param form that Playwright reads via toString() to discover fixtures
+    // The destructured parameter lists the fixtures Playwright sets up for each scenario
     init = (({
         browser,
         context,

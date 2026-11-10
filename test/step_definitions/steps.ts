@@ -284,12 +284,6 @@ When('template with arguments', Template(() => `
       """
 `));
 
-Then('test location is line {int} of {string}', async function (this: ExtendedPlaywrightWorld, line: number, file: string) {
-    const info = this.test.info();
-    this.expect(info.file.endsWith(file)).toBe(true);
-    this.expect(info.line).toBe(line);
-});
-
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 When('step that takes 500 ms with 100 ms timeout', { timeout: 100 }, async function () {

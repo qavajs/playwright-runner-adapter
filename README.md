@@ -534,7 +534,7 @@ To run a single feature or scenario use `CUCUMBER_PATHS=features/login.feature n
 
 ## Reports
 
-- Scenarios are reported at their location in the `.feature` file (Scenario Outline examples point to their example row), so reporters and `--list` show `features/login.feature:12:3`.
+- Scenarios are reported at the `defineConfig(...)` call in the config file (e.g. `cucumber.config.ts:3:16`), which is the test file Playwright loads, so UI mode and `playwright test cucumber.config.ts` run them. To run single features use `CUCUMBER_PATHS` or `--grep`.
 - Steps point to their step definition; set `stepLocation: 'feature'` to point them to the step line in the `.feature` file instead.
 - Steps are reported with a short preview of their argument: `I submit the form [DataTable: | field | value | | username | alice |]`.
 - Features with the same name in different files get the file path appended to their title to keep test titles unique.
