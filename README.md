@@ -24,6 +24,7 @@ Adapter to run [Cucumber](https://cucumber.io/) BDD tests via the [Playwright](h
 - [Annotations, Modifiers and Locks](#annotations-modifiers-and-locks)
 - [Parallelism](#parallelism)
 - [Reports](#reports)
+  - [Cucumber JSON report](#cucumber-json-report)
 - [Entrypoints and JavaScript Support](#entrypoints-and-javascript-support)
 - [Timeouts](#timeouts)
 - [Supported Cucumber APIs](#supported-cucumber-apis)
@@ -36,6 +37,8 @@ Adapter to run [Cucumber](https://cucumber.io/) BDD tests via the [Playwright](h
 ```bash
 npm install @qavajs/playwright-runner-adapter
 ```
+
+Requires Node.js 22 or later.
 
 ---
 
@@ -539,6 +542,34 @@ To run a single feature or scenario use `CUCUMBER_PATHS=features/login.feature n
 - Steps are reported with a short preview of their argument: `I submit the form [DataTable: | field | value | | username | alice |]`.
 - Features with the same name in different files get the file path appended to their title to keep test titles unique.
 
+### Cucumber JSON report
+
+The package includes a Playwright reporter that writes results in the Cucumber JSON format (the format of cucumber-js `--format json`). Tools such as cucumber-html-reporter, multiple-cucumber-html-reporter, Jenkins Cucumber Reports and Xray can read it:
+
+```typescript
+// playwright.config.ts
+import { defineConfig } from '@playwright/test';
+
+export default defineConfig({
+    testMatch: 'cucumber.config.ts',
+    reporter: [
+        ['html'],
+        ['@qavajs/playwright-runner-adapter/reporter', { outputFile: 'report/cucumber.json' }]
+    ]
+});
+```
+
+| Option | Description |
+|---|---|
+| `outputFile` | Report path relative to the Playwright config directory (default `cucumber-report.json`) |
+
+- `Before` / `After` hooks are reported as hidden steps; `BeforeStep` / `AfterStep` hooks are part of their step.
+- Step statuses follow Cucumber: `passed`, `failed`, `skipped`, `pending`, `undefined`, `ambiguous`.
+- Attachments made with `this.attach` and `this.log` during a step or hook become its `embeddings` (logs get the `text/x.cucumber.log+plain` media type). Attachments that Playwright adds to the test itself (screenshots, traces, videos) are not included.
+- A failure outside of steps and hooks (e.g. in a fixture or world `init`) is reported as a failed hidden hook.
+- Only the last attempt of a retried scenario is reported. Each Playwright project gets its own feature entries, so a scenario that runs in several projects (e.g. browsers) appears once per project.
+- Tests that are not Cucumber scenarios are ignored.
+
 ---
 
 ## Entrypoints and JavaScript Support
@@ -605,6 +636,6 @@ Before({ tags: '@db', timeout: 10_000 }, async function () { /* ... */ });
 
 ## Limitations
 
-- **ES modules** — not supported for Node.js < 22 (where experimental ESM `require` is available). Use CommonJS or TypeScript with `ts-node`.
+- **ES modules** — step definitions and support files are loaded with `require`, so ES modules need Node.js 22.12+, and top-level await in them is not supported (the error says so). Move awaited code into a `BeforeAll` hook or a step.
 - **`setParallelCanAssign`** — not supported. Use Playwright [projects](https://playwright.dev/docs/test-projects) with `fullyParallel` to control parallelism.
 - **`CUCUMBER_PARALLEL` / `CUCUMBER_TOTAL_WORKERS` / `CUCUMBER_WORKER_ID`** — not supported. Use `this.test.info().parallelIndex` and `this.test.info().workerIndex` instead.

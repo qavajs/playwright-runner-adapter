@@ -33,7 +33,13 @@ try {
         }
         run(`npm install --no-audit --no-fund ${dependencies.join(' ')}`, project);
         if (setup === 'ts') run('npx tsc -p tsconfig.json', project);
-        run('npx playwright test --reporter=list', project);
+        // the Cucumber JSON reporter is resolved through the package `./reporter` export
+        run(`npx playwright test --reporter=list,${rootPackage.name}/reporter`, project);
+        const report = JSON.parse(readFileSync(join(project, 'cucumber-report.json'), 'utf-8'));
+        const statuses = report.flatMap(feature => feature.elements.flatMap(e => e.steps.map(s => s.result.status)));
+        if (statuses.length === 0 || statuses.some(status => status !== 'passed')) {
+            throw new Error(`unexpected cucumber-report.json step statuses: ${statuses.join(', ')}`);
+        }
         console.log(`\n✔ ${setup} setup passed`);
     }
 } finally {

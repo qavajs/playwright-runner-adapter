@@ -14,6 +14,13 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 :microscope: - experimental
 
+## [2.7.0]
+- :rocket: added Cucumber JSON reporter `@qavajs/playwright-runner-adapter/reporter`, so cucumber-html-reporter, Jenkins Cucumber Reports, Xray and other tools can read the results
+- :rocket: loading an ES module step definition or support file with top-level await, or on Node.js without `require(esm)`, fails with an error explaining the cause
+- :beetle: hooks receive unique `testCaseStartedId` (per attempt) and `testStepId` (per step) instead of `'0'`
+- :pencil: step definitions matching a step text are cached, so each distinct step text is matched once per worker
+- :pencil: added `engines` field: Node.js 22 or later
+
 ## [2.6.1]
 - :x: reverted reporting tests and describe blocks at their location in the `.feature` file (added in 2.5.0): with a single feature file Playwright treated the `.feature` file as the test file, and UI mode ran nothing
 - :beetle: tests and describe blocks are located at the `defineConfig(...)` call in the config file. Previously they pointed to the adapter's own file, and when its extension differed from the config file's (e.g. ESM `.js` config, or `.ts` config with the `./js` entrypoint), UI mode ran nothing. Step locations (`stepLocation`) are unchanged

@@ -1,53 +1,37 @@
-import { globSync, readFileSync } from 'node:fs';
-import { join, relative, resolve } from 'node:path';
+import { join } from 'node:path';
 import { createRequire } from 'node:module';
-import { randomUUID } from 'node:crypto';
-import { AstBuilder, compile, GherkinClassicTokenMatcher, Parser } from '@cucumber/gherkin';
 import { supportCodeLibraryBuilder } from '@cucumber/cucumber';
-import type { Pickle } from '@cucumber/messages';
 import { PlaywrightWorld } from './PlaywrightWorld';
+import { findFiles, loadFeatures, uuidFn } from './features';
 import type { CucumberAdapterConfig, Feature, SupportCodeLibrary } from './types';
 
-const uuidFn = () => randomUUID();
-const builder = new AstBuilder(uuidFn);
-const matcher = new GherkinClassicTokenMatcher();
-const parser = new Parser(builder, matcher);
-
-function duplicates(tests: readonly Pickle[]) {
-    const counts: Record<string, number> = {};
-    return tests.map(item => {
-        const name = item.name;
-        if (!(name in counts)) {
-            counts[name] = 1;
-        }
-        if (counts[name] > 1) {
-            item.name = `${item.name} ${counts[name]}`;
-        }
-        counts[name] = counts[name] + 1;
-        return item;
-    });
-}
+export { findFiles, loadFeatures } from './features';
 
 /**
- * Find files matching glob patterns; returns unique absolute paths in stable (sorted) order
+ * Require a step definition or support file, explaining errors of ES modules that can't be required
  */
-export function findFiles(patterns: string[]): string[] {
-    if (patterns.length === 0) return [];
-    const files = globSync(patterns).map(file => resolve(file));
-    return [...new Set(files)].sort();
-}
-
-export function loadFeatures(globPattern: string[]): Feature[] {
-    const files = findFiles(globPattern);
-    return files.map(filePath => {
-        const gherkinDocument = parser.parse(readFileSync(filePath, 'utf-8'));
-        return {
-            feature: gherkinDocument.feature?.name,
-            uri: filePath,
-            gherkinDocument,
-            tests: duplicates(compile(gherkinDocument, relative(process.cwd(), filePath), uuidFn))
-        };
-    });
+export function requireFile(load: (id: string) => unknown, id: string): void {
+    try {
+        load(id);
+    } catch (err) {
+        const code = (err as NodeJS.ErrnoException).code;
+        if (code === 'ERR_REQUIRE_ASYNC_MODULE') {
+            throw new Error(
+                `Can't load ${id}: it is an ES module with top-level await (directly or in a module it imports). ` +
+                    'Step definitions and support files are loaded synchronously, so top-level await is not supported; ' +
+                    'move the awaited code into a BeforeAll hook or a step',
+                { cause: err }
+            );
+        }
+        if (code === 'ERR_REQUIRE_ESM') {
+            throw new Error(
+                `Can't load ${id}: it is an ES module, and requiring ES modules needs Node.js 22.12+ ` +
+                    `(current ${process.version}). Upgrade Node.js or use CommonJS / TypeScript step definitions`,
+                { cause: err }
+            );
+        }
+        throw err;
+    }
 }
 
 /**
@@ -56,7 +40,7 @@ export function loadFeatures(globPattern: string[]): Feature[] {
 export function loadModules(modules: string[]): void {
     const cwdRequire = createRequire(join(process.cwd(), 'index.js'));
     for (const name of modules) {
-        cwdRequire(name);
+        requireFile(cwdRequire, name);
     }
 }
 
@@ -67,7 +51,7 @@ export function loadStepDefinitions(globPattern: string[], requireModules: strin
     supportCodeLibraryBuilder.methods.setWorldConstructor(PlaywrightWorld);
     loadModules(requireModules);
     for (const filePath of findFiles(globPattern)) {
-        require(filePath);
+        requireFile(require, filePath);
     }
     return supportCodeLibraryBuilder.finalize() as unknown as SupportCodeLibrary;
 }

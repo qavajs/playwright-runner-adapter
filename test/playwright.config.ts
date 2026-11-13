@@ -16,7 +16,8 @@ export default defineConfig({
     reporter: [
         ['html', { outputFolder: 'report' }],
         ['junit', { outputFile: 'report/report.xml' }],
-        ['@qavajs/playwright-console-reporter']
+        ['@qavajs/playwright-console-reporter'],
+        ['../src/reporter.ts', { outputFile: 'report/cucumber.json' }]
     ],
     /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
     use: {

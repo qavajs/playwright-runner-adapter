@@ -7,6 +7,10 @@ import { buildSnippet, stepTitle, toPickleArgument } from '../adapter/gherkin';
 import { resolveTimeout, runWithTimeout } from '../adapter/timeout';
 import { fixtureNames, withFixtures } from '../adapter/fixtures';
 import { ScenarioRunner } from '../adapter/scenarioRunner';
+import { buildFeatureJson, type ReportedStep, type ScenarioReport } from '../adapter/cucumberJson';
+import { parseFeature } from '../adapter/features';
+import { requireFile } from '../adapter/loader';
+import { findStepDefinitions } from '../adapter/stepDefinitions';
 import type { Feature, HookDefinition, StepDefinitionMatch, SupportCodeLibrary } from '../adapter/types';
 
 test.describe('tags()', () => {
@@ -287,7 +291,7 @@ test.describe('ScenarioRunner', () => {
         beforeStep?: HookDefinition[];
         afterStep?: HookDefinition[];
     }) {
-        const testInfo = { errors: [] as { message?: string }[], expectedStatus: 'passed' };
+        const testInfo = { errors: [] as { message?: string }[], expectedStatus: 'passed', testId: 'abc', retry: 1 };
         const skippedSteps: string[] = [];
         const step = Object.assign(async (_title: string, body: () => unknown) => body(), {
             skip: async (title: string) => { skippedSteps.push(title); }
@@ -337,6 +341,17 @@ test.describe('ScenarioRunner', () => {
     function hook(code: (payload: HookPayload) => unknown): HookDefinition {
         return { line: 1, code: code as HookDefinition['code'], appliesToTestCase: () => true };
     }
+
+    test('passes unique test case started and test step ids to hooks', async () => {
+        const ids: string[] = [];
+        const { runner } = createRunner({
+            steps: { 'first step': () => {}, 'second step': () => {} },
+            before: [hook(payload => { ids.push((payload as any).testCaseStartedId); })],
+            afterStep: [hook(payload => { ids.push(`${(payload as any).testCaseStartedId} ${(payload as any).testStepId}`); })]
+        });
+        await runner.run();
+        expect(ids).toEqual(['abc-1', 'abc-1 abc-0', 'abc-1 abc-1']);
+    });
 
     test('runs all After hooks when one of them fails', async () => {
         const results: string[] = [];
@@ -542,5 +557,172 @@ test.describe('withFixtures()', () => {
         expect(Function.prototype.toString.call(fn)).toContain('async function ({ page, context })');
         await fn({ page: 1, context: 2 });
         expect(received).toEqual({ page: 1, context: 2 });
+    });
+});
+
+test.describe('findStepDefinitions()', () => {
+    test('matches each step text against definitions once', () => {
+        const calls: string[] = [];
+        const definition = {
+            matchesStepName: (text: string) => { calls.push(text); return text === 'step'; }
+        } as unknown as StepDefinitionMatch;
+        const library = { stepDefinitions: [definition] } as unknown as SupportCodeLibrary;
+        expect(findStepDefinitions(library, 'step')).toEqual([definition]);
+        expect(findStepDefinitions(library, 'step')).toEqual([definition]);
+        expect(findStepDefinitions(library, 'other')).toEqual([]);
+        expect(calls).toEqual(['step', 'other']);
+    });
+});
+
+test.describe('requireFile()', () => {
+    const failWith = (code: string) => () => { throw Object.assign(new Error('original'), { code }); };
+
+    test('explains ES modules with top-level await', () => {
+        expect(() => requireFile(failWith('ERR_REQUIRE_ASYNC_MODULE'), 'steps.mjs'))
+            .toThrow(`Can't load steps.mjs: it is an ES module with top-level await`);
+    });
+
+    test('explains ES modules on Node.js without require(esm)', () => {
+        expect(() => requireFile(failWith('ERR_REQUIRE_ESM'), 'steps.mjs')).toThrow('needs Node.js 22.12+');
+    });
+
+    test('rethrows other errors', () => {
+        expect(() => requireFile(failWith('MODULE_NOT_FOUND'), 'steps.js')).toThrow('original');
+    });
+});
+
+test.describe('buildFeatureJson()', () => {
+    const uri = 'test/fixtures/cucumberJson.feature';
+    const feature = parseFeature(uri);
+
+    function step(title: string, options: Partial<ReportedStep> = {}): ReportedStep {
+        return {
+            title,
+            category: 'test.step',
+            duration: 2,
+            location: { file: 'steps.ts', line: 10 },
+            annotations: [],
+            attachments: [],
+            steps: [],
+            ...options
+        };
+    }
+
+    function scenario(name: string, options: Partial<ScenarioReport>): ScenarioReport {
+        return { project: 'p', uri, name, status: 'passed', annotations: [], steps: [], ...options };
+    }
+
+    const allStepTitles = [
+        'background step',
+        'step with doc string [MultiLine: body]',
+        'step with table [DataTable: | a | b |]',
+        'last step'
+    ];
+
+    test('builds feature, scenarios, hooks and gherkin steps', () => {
+        const [json] = [buildFeatureJson(feature, uri, [
+            scenario('all statuses', {
+                steps: [
+                    step('Before Hooks', { category: 'hook' }),
+                    step('Before'),
+                    ...allStepTitles.map(title => step(title)),
+                    step('Named After', {
+                        attachments: [{ name: 'log', contentType: 'text/plain', body: Buffer.from('logged') }]
+                    })
+                ]
+            }),
+            scenario('outline one', {})
+        ])];
+        expect(json).toMatchObject({
+            uri,
+            id: 'cucumber-json',
+            keyword: 'Feature',
+            name: 'cucumber json',
+            line: 2,
+            tags: [{ name: '@featureTag', line: 1 }]
+        });
+        const [allStatuses, outline] = json.elements;
+        expect(allStatuses).toMatchObject({
+            id: 'cucumber-json;all-statuses',
+            keyword: 'Scenario',
+            line: 8,
+            type: 'scenario',
+            tags: [{ name: '@featureTag', line: 1 }, { name: '@scenarioTag', line: 7 }]
+        });
+        expect(allStatuses.steps.map(s => [s.keyword, s.name, s.hidden])).toEqual([
+            ['Before', undefined, true],
+            ['Given ', 'background step', undefined],
+            ['When ', 'step with doc string', undefined],
+            ['And ', 'step with table', undefined],
+            ['Then ', 'last step', undefined],
+            ['After', 'Named After', true]
+        ]);
+        expect(allStatuses.steps[1]).toMatchObject({
+            line: 5,
+            match: { location: 'steps.ts:10' },
+            result: { status: 'passed', duration: 2_000_000 }
+        });
+        expect(allStatuses.steps[2].arguments).toEqual([{ content: 'body', line: 10 }]);
+        expect(allStatuses.steps[3].arguments).toEqual([{ rows: [{ cells: ['a', 'b'] }] }]);
+        expect(allStatuses.steps[5].embeddings).toEqual([
+            { data: Buffer.from('logged').toString('base64'), mime_type: 'text/x.cucumber.log+plain' }
+        ]);
+        // outline example points to its example row; steps that were not reported are skipped
+        expect(outline).toMatchObject({ name: 'outline one', keyword: 'Scenario Outline', line: 22 });
+        expect(outline.steps.map(s => s.result.status)).toEqual(['skipped', 'skipped']);
+    });
+
+    test('reports status of undefined, failed and skipped steps', () => {
+        const json = buildFeatureJson(feature, uri, [
+            scenario('all statuses', {
+                status: 'failed',
+                steps: [
+                    step(allStepTitles[0], { error: { message: `StepStatusError: Step 'background step' is not defined\n  at x` } }),
+                    step(allStepTitles[1], { error: { message: 'Error: boom', stack: 'Error: boom\n    at steps.ts:1' } }),
+                    step(allStepTitles[2], {
+                        steps: [{ ...step('expect.soft'), category: 'expect', error: { message: 'soft error' } }]
+                    }),
+                    step(allStepTitles[3], { annotations: [{ type: 'skip' }] })
+                ]
+            })
+        ]);
+        expect(json.elements[0].steps.map(s => [s.result.status, s.result.error_message])).toEqual([
+            ['undefined', `StepStatusError: Step 'background step' is not defined\n  at x`],
+            ['failed', 'Error: boom\n    at steps.ts:1'],
+            ['failed', 'soft error'],
+            ['skipped', undefined]
+        ]);
+    });
+
+    test('marks the last executed step skipped or pending when a step returns it', () => {
+        const run = (annotations: ScenarioReport['annotations']) =>
+            buildFeatureJson(feature, uri, [
+                scenario('all statuses', {
+                    status: 'skipped',
+                    annotations,
+                    steps: [
+                        step(allStepTitles[0]),
+                        step(allStepTitles[1]),
+                        ...allStepTitles.slice(2).map(title => step(title, { annotations: [{ type: 'skip' }] }))
+                    ]
+                })
+            ]).elements[0].steps.map(s => s.result.status);
+        expect(run([{ type: 'skip', description: 'Scenario skipped by step or hook' }]))
+            .toEqual(['passed', 'skipped', 'skipped', 'skipped']);
+        expect(run([{ type: 'fixme', description: `Step 'step with doc string' is pending\n  at x` }]))
+            .toEqual(['passed', 'pending', 'skipped', 'skipped']);
+    });
+
+    test('adds a failed hook for failures outside of steps', () => {
+        const json = buildFeatureJson(feature, uri, [
+            scenario('all statuses', { status: 'failed', error: { message: 'fixture failed' } })
+        ]);
+        const [hookStep, ...steps] = json.elements[0].steps;
+        expect(hookStep).toEqual({
+            keyword: 'Before',
+            hidden: true,
+            result: { status: 'failed', duration: 0, error_message: 'fixture failed' }
+        });
+        expect(steps.map(s => s.result.status)).toEqual(['skipped', 'skipped', 'skipped', 'skipped']);
     });
 });
