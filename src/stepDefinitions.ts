@@ -10,11 +10,25 @@ export interface UndefinedStep {
     location?: string;
 }
 
+/** matched step definitions by step text, per support code library (step definitions don't change once loaded) */
+const matchCache = new WeakMap<SupportCodeLibrary, Map<string, StepDefinitionMatch[]>>();
+
 /**
- * Find step definitions matching the step text
+ * Find step definitions matching the step text.
+ * Results are cached by text, so each distinct step text is matched against all definitions only once per worker.
  */
 export function findStepDefinitions(supportCodeLibrary: SupportCodeLibrary, text: string): StepDefinitionMatch[] {
-    return supportCodeLibrary.stepDefinitions.filter(stepDefinition => stepDefinition.matchesStepName(text));
+    let cache = matchCache.get(supportCodeLibrary);
+    if (!cache) {
+        cache = new Map();
+        matchCache.set(supportCodeLibrary, cache);
+    }
+    let matches = cache.get(text);
+    if (!matches) {
+        matches = supportCodeLibrary.stepDefinitions.filter(stepDefinition => stepDefinition.matchesStepName(text));
+        cache.set(text, matches);
+    }
+    return matches;
 }
 
 function at(location?: string): string[] {

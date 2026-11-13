@@ -16,9 +16,10 @@ export const HOOK_NAMES = {
     AFTER_STEP: 'After Step'
 } as const;
 
-const TEST_CASE_ID = '0';
-const TEST_STEP_ID = '0';
 const DEFAULT_COLUMN = 1;
+
+/** reason of `test.skip()` when a step or Before hook returns `'skipped'` */
+export const SKIPPED_BY_STEP_REASON = 'Scenario skipped by step or hook';
 
 type ExecutionStatus = 'passed' | 'failed' | 'skipped' | 'pending' | 'undefined' | 'ambiguous';
 
@@ -174,7 +175,7 @@ export class ScenarioRunner {
         if (failure) throw failure.error;
 
         if (this.result.status === 'skipped') {
-            world.test.skip(true, 'Scenario skipped by step or hook');
+            world.test.skip(true, SKIPPED_BY_STEP_REASON);
         }
         if (this.result.status === 'pending') {
             world.test.fixme(true, this.result.error?.message);
@@ -201,7 +202,7 @@ export class ScenarioRunner {
                 await this.runHooks(
                     supportCodeLibrary.beforeTestStepHookDefinitions,
                     HOOK_NAMES.BEFORE_STEP,
-                    () => this.stepHookParameter(pickleStep),
+                    () => this.stepHookParameter(pickleStep, index),
                     onError
                 );
                 if (!failure) {
@@ -210,7 +211,7 @@ export class ScenarioRunner {
                 await this.runHooks(
                     reversed(supportCodeLibrary.afterTestStepHookDefinitions),
                     HOOK_NAMES.AFTER_STEP,
-                    () => ({ ...this.stepHookParameter(pickleStep), result: toHookResult(stepResult) }),
+                    () => ({ ...this.stepHookParameter(pickleStep, index), result: toHookResult(stepResult) }),
                     onError
                 );
                 if (failure) throw failure.error;
@@ -346,18 +347,28 @@ export class ScenarioRunner {
         if (softError) this.mark('failed', new Error(softError.message ?? softError.value), ...results);
     }
 
+    /**
+     * Unique per attempt: Playwright test id (includes project and repeat index) and retry
+     */
+    private get testCaseStartedId(): string {
+        return `${this.testInfo.testId}-${this.testInfo.retry}`;
+    }
+
     private caseHookParameter() {
         return {
             gherkinDocument: this.ctx.feature.gherkinDocument,
             pickle: this.ctx.testCase,
-            testCaseStartedId: TEST_CASE_ID
+            testCaseStartedId: this.testCaseStartedId
         };
     }
 
-    private stepHookParameter(pickleStep: PickleStep) {
+    /**
+     * @param index - index of the step in the scenario; the step id is the same in every attempt
+     */
+    private stepHookParameter(pickleStep: PickleStep, index: number) {
         return {
             ...this.caseHookParameter(),
-            testStepId: TEST_STEP_ID,
+            testStepId: `${this.testInfo.testId}-${index}`,
             pickleStep
         };
     }

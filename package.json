@@ -1,6 +1,6 @@
 {
   "name": "@qavajs/playwright-runner-adapter",
-  "version": "2.6.1",
+  "version": "2.7.0",
   "description": "adapter for playwright test runner",
   "main": "adapter/index.js",
   "types": "adapter/index.d.ts",
@@ -17,6 +17,12 @@
       "import": "./adapter/js/index.js",
       "default": "./adapter/js/index.js"
     },
+    "./reporter": {
+      "types": "./adapter/reporter.d.ts",
+      "require": "./adapter/reporter.js",
+      "import": "./adapter/reporter.js",
+      "default": "./adapter/reporter.js"
+    },
     "./package.json": "./package.json"
   },
   "files": [
@@ -25,6 +31,9 @@
     "CHANGELOG.md",
     "LICENSE"
   ],
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "build": "tsc && tsc --project tsconfig.js.json",
     "lint": "biome check",
