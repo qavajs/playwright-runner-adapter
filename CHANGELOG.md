@@ -14,7 +14,7 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 :microscope: - experimental
 
-## [Unreleased]
+## [3.0.0]
 - :x: removed `@cucumber/cucumber` dependency (and its ~90 transitive packages): step definitions, hooks, parameter types, `DataTable`, `Status`, `World` and snippets are implemented by the adapter on top of `@cucumber/cucumber-expressions`, `@cucumber/gherkin` and `@cucumber/messages`. Import support code API from `@qavajs/playwright-runner-adapter` instead of `@cucumber/cucumber`; cucumber internals (`formatterHelpers`, formatters, `world` / `context` proxies, `version`) are no longer exported
 - :rocket: step definitions using an undefined parameter type fail loading with an error listing them (previously such steps were silently reported as undefined)
 - :rocket: hook tag expressions are validated at load, e.g. a tag without `@` fails with an error naming the hook location
