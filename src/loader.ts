@@ -1,8 +1,8 @@
 import { join } from 'node:path';
 import { createRequire } from 'node:module';
-import { supportCodeLibraryBuilder } from '@cucumber/cucumber';
+import { supportCodeLibraryBuilder } from './supportCode';
 import { PlaywrightWorld } from './PlaywrightWorld';
-import { findFiles, loadFeatures, uuidFn } from './features';
+import { findFiles, loadFeatures } from './features';
 import type { CucumberAdapterConfig, Feature, SupportCodeLibrary } from './types';
 
 export { findFiles, loadFeatures } from './features';
@@ -45,15 +45,12 @@ export function loadModules(modules: string[]): void {
 }
 
 export function loadStepDefinitions(globPattern: string[], requireModules: string[] = []): SupportCodeLibrary {
-    supportCodeLibraryBuilder.reset(process.cwd(), uuidFn);
-    // cucumber defaults to 5000ms; apply a default timeout only when set explicitly with setDefaultTimeout
-    (supportCodeLibraryBuilder as unknown as { defaultTimeout?: number }).defaultTimeout = undefined;
-    supportCodeLibraryBuilder.methods.setWorldConstructor(PlaywrightWorld);
+    supportCodeLibraryBuilder.reset(process.cwd(), PlaywrightWorld);
     loadModules(requireModules);
     for (const filePath of findFiles(globPattern)) {
         requireFile(require, filePath);
     }
-    return supportCodeLibraryBuilder.finalize() as unknown as SupportCodeLibrary;
+    return supportCodeLibraryBuilder.finalize();
 }
 
 export function load(config: CucumberAdapterConfig): { features: Feature[]; supportCodeLibrary: SupportCodeLibrary } {

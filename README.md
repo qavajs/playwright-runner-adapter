@@ -612,6 +612,8 @@ Before({ tags: '@db', timeout: 10_000 }, async function () { /* ... */ });
 
 - `setDefaultTimeout(ms)` sets the timeout for all steps and hooks without their own `{ timeout }`. Unlike Cucumber, there is no 5 second default: without `setDefaultTimeout` only the Playwright test timeout applies. `-1` disables the timeout for a definition.
 
+> **Note:** when a step or hook `{ timeout }` expires, the step fails and the scenario moves on (to After hooks), but JavaScript can't cancel the step code itself: it keeps running in the background until its pending promises settle, as in Cucumber. Its late actions may hit a page that After hooks are already cleaning up, so give long-running code its own timeouts (e.g. `locator.click({ timeout })`) to make sure it stops shortly after the step timeout.
+
 ---
 
 ## Supported Cucumber APIs
@@ -637,5 +639,6 @@ Before({ tags: '@db', timeout: 10_000 }, async function () { /* ... */ });
 ## Limitations
 
 - **ES modules** — step definitions and support files are loaded with `require`, so ES modules need Node.js 22.12+, and top-level await in them is not supported (the error says so). Move awaited code into a `BeforeAll` hook or a step.
-- **`setParallelCanAssign`** — not supported. Use Playwright [projects](https://playwright.dev/docs/test-projects) with `fullyParallel` to control parallelism.
+- **`setParallelCanAssign`** — not supported (exported for compatibility, does nothing). Use Playwright [projects](https://playwright.dev/docs/test-projects) with `fullyParallel` to control parallelism.
+- **`@cucumber/cucumber` is not a dependency** — the adapter implements the Cucumber support code API itself. Import `Given`, `When`, `Then`, hooks, `DataTable`, `Status`, `World` etc. from `@qavajs/playwright-runner-adapter`: definitions registered through `@cucumber/cucumber` are not seen by the adapter. Cucumber internals (`supportCodeLibraryBuilder` methods, formatters, `world` / `context` proxies) are not available.
 - **`CUCUMBER_PARALLEL` / `CUCUMBER_TOTAL_WORKERS` / `CUCUMBER_WORKER_ID`** — not supported. Use `this.test.info().parallelIndex` and `this.test.info().workerIndex` instead.

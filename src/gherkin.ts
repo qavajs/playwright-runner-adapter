@@ -1,7 +1,16 @@
 import { fileURLToPath } from 'node:url';
 import { runInThisContext } from 'node:vm';
-import { DataTable } from '@cucumber/cucumber';
-import type { GherkinDocument, PickleStep, PickleStepArgument, Scenario, Step } from '@cucumber/messages';
+import { CucumberExpressionGenerator, type GeneratedExpression } from '@cucumber/cucumber-expressions';
+import type {
+    GherkinDocument,
+    PickleDocString,
+    PickleStep,
+    PickleStepArgument,
+    PickleTable,
+    Scenario,
+    Step
+} from '@cucumber/messages';
+import { DataTable } from './dataTable';
 import type { SupportCodeLibrary } from './types';
 
 export interface SourceLocation {
@@ -86,14 +95,28 @@ export function callerLocation(fn: (...args: any[]) => unknown): SourceLocation 
  */
 export function callAt<T>(location: SourceLocation | undefined, fn: (...args: any[]) => T, args: unknown[]): T {
     if (!location) return fn(...args);
-    const code = '(function (fn, args) { return fn(...args); })';
-    const callColumn = code.indexOf('fn(...args)');
-    const caller = runInThisContext(code, {
-        filename: location.file,
-        lineOffset: location.line - 1,
-        columnOffset: location.column - 1 - callColumn
-    });
-    return caller(fn, args);
+    return callerAt(location)(fn, args) as T;
+}
+
+type Caller = (fn: (...args: any[]) => unknown, args: unknown[]) => unknown;
+
+const CALLER_CODE = '(function (fn, args) { return fn(...args); })';
+const CALL_COLUMN = CALLER_CODE.indexOf('fn(...args)');
+/** compiled callers by location; all tests of a config are located at the same `defineConfig` call */
+const callers = new Map<string, Caller>();
+
+function callerAt(location: SourceLocation): Caller {
+    const key = `${location.file}:${location.line}:${location.column}`;
+    let caller = callers.get(key);
+    if (!caller) {
+        caller = runInThisContext(CALLER_CODE, {
+            filename: location.file,
+            lineOffset: location.line - 1,
+            columnOffset: location.column - 1 - CALL_COLUMN
+        }) as Caller;
+        callers.set(key, caller);
+    }
+    return caller;
 }
 
 function preview(text: string): string {
@@ -146,37 +169,63 @@ export function toPickleArgument(value: unknown): { argument?: PickleStepArgumen
     return { extra: value };
 }
 
-const KEYWORD_TYPES: Record<string, string> = {
-    Context: 'precondition',
-    Action: 'event',
-    Outcome: 'outcome'
+/**
+ * Map doc string and / or data table of a step, in the order they appear in the source
+ * (data table first when the order is not known)
+ */
+export function parseStepArguments<T>(
+    argument: PickleStepArgument | undefined,
+    mapping: { dataTable: (table: PickleTable) => T; docString: (docString: PickleDocString) => T }
+): T[] {
+    type Indexed = { argumentIndex?: number };
+    const order = (value: Indexed) => value.argumentIndex ?? Number.MAX_SAFE_INTEGER;
+    const items: { index: number; value: () => T }[] = [];
+    if (argument?.dataTable) {
+        const table = argument.dataTable;
+        items.push({ index: order(table as Indexed), value: () => mapping.dataTable(table) });
+    }
+    if (argument?.docString) {
+        const docString = argument.docString;
+        items.push({ index: order(docString as Indexed), value: () => mapping.docString(docString) });
+    }
+    return items.sort((a, b) => a.index - b.index).map(item => item.value());
+}
+
+const SNIPPET_FUNCTIONS: Record<string, string> = {
+    Context: 'Given',
+    Action: 'When',
+    Outcome: 'Then'
 };
 
+const SNIPPET_COMMENT = 'Write code here that turns the phrase above into concrete actions';
+
+function snippetPattern(expression: GeneratedExpression): string {
+    return expression.source.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+}
+
 /**
- * Build cucumber-style snippet for undefined step
+ * Build cucumber-style snippet for undefined step.
+ * Alternative expressions (e.g. `{int}` or `{float}` for a number) are listed as comments.
  */
 export function buildSnippet(
     supportCodeLibrary: Pick<SupportCodeLibrary, 'parameterTypeRegistry'>,
-    pickleStep: PickleStep
+    pickleStep: Pick<PickleStep, 'text' | 'argument'> & Partial<PickleStep>
 ): string | undefined {
-    try {
-        const {
-            default: SnippetBuilder
-        } = require('@cucumber/cucumber/lib/formatter/step_definition_snippet_builder/index');
-        const {
-            default: SnippetSyntax
-        } = require('@cucumber/cucumber/lib/formatter/step_definition_snippet_builder/javascript_snippet_syntax');
-        const builder = new SnippetBuilder({
-            snippetSyntax: new SnippetSyntax('async-await'),
-            parameterTypeRegistry: supportCodeLibrary.parameterTypeRegistry
-        });
-        return builder.build({
-            keywordType: KEYWORD_TYPES[pickleStep.type ?? ''] ?? 'precondition',
-            pickleStep
-        });
-    } catch {
-        return undefined;
-    }
+    const registry = supportCodeLibrary.parameterTypeRegistry;
+    const generator = new CucumberExpressionGenerator(() => registry.parameterTypes);
+    const expressions = generator.generateExpressions(pickleStep.text);
+    if (expressions.length === 0) return undefined;
+    const functionName = SNIPPET_FUNCTIONS[pickleStep.type ?? ''] ?? 'Given';
+    const argumentNames = parseStepArguments(pickleStep.argument, {
+        dataTable: () => 'dataTable',
+        docString: () => 'docString'
+    });
+    const definitions = expressions.map((expression, index) => {
+        const parameters = [...expression.parameterNames, ...argumentNames].join(', ');
+        const prefix = index === 0 ? '' : '// ';
+        return `${prefix}${functionName}('${snippetPattern(expression)}', async function (${parameters}) {\n`;
+    });
+    return `${definitions.join('')}  // ${SNIPPET_COMMENT}\n  return 'pending';\n});`;
 }
 
 export function formatLocation(location?: SourceLocation): string {

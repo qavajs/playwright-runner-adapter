@@ -1,3 +1,4 @@
+import { performance } from 'node:perf_hooks';
 import { resolveTimeout, runWithTimeout } from './timeout';
 import { formatLocation, resolveLocation, stepTitle, type Position, type SourceLocation } from './gherkin';
 import { ambiguousStepMessage, findStepDefinitions, undefinedStepsMessage } from './stepDefinitions';
@@ -74,7 +75,7 @@ export function reversed<T>(hooks: readonly T[]): T[] {
 }
 
 function createResult(): ExecutionResult {
-    return { status: 'passed', start: Date.now() };
+    return { status: 'passed', start: performance.now() };
 }
 
 /**
@@ -88,9 +89,9 @@ function setStatus(result: ExecutionResult, status: ExecutionStatus, error?: Err
 
 function toHookResult(result: ExecutionResult): HookResult {
     return {
-        duration: Date.now() - result.start,
+        duration: performance.now() - result.start,
         message: result.error?.message,
-        status: result.status.toUpperCase(),
+        status: result.status.toUpperCase() as HookResult['status'],
         exception: result.error
     };
 }

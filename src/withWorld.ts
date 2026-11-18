@@ -7,28 +7,22 @@ import {
     Given,
     Then,
     When,
+    type DefineStepPattern,
+    type IDefineStepOptions,
+    type IDefineTestCaseHookOptions,
     type ITestCaseHookParameter,
     type ITestStepHookParameter
-} from '@cucumber/cucumber';
+} from './supportCode';
 
-type StepPattern = string | RegExp;
 type StepFunction<World> = (this: World, ...args: any[]) => unknown;
 type HookFunction<World, Parameter> = (this: World, parameter: Parameter) => unknown;
 
-export interface StepOptions {
-    timeout?: number;
-    wrapperOptions?: unknown;
-}
-
-export interface HookOptions {
-    name?: string;
-    tags?: string;
-    timeout?: number;
-}
+export type StepOptions = IDefineStepOptions;
+export type HookOptions = IDefineTestCaseHookOptions;
 
 export interface DefineStep<World> {
-    (pattern: StepPattern, code: StepFunction<World>): void;
-    (pattern: StepPattern, options: StepOptions, code: StepFunction<World>): void;
+    (pattern: DefineStepPattern, code: StepFunction<World>): void;
+    (pattern: DefineStepPattern, options: StepOptions, code: StepFunction<World>): void;
 }
 
 export interface DefineHook<World, Parameter> {
