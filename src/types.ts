@@ -1,4 +1,5 @@
-import type { GherkinDocument, Pickle } from '@cucumber/messages';
+import type { ParameterTypeRegistry } from '@cucumber/cucumber-expressions';
+import type { GherkinDocument, Pickle, PickleStepArgument, TestStepResultStatus } from '@cucumber/messages';
 import type { TestType } from '@playwright/test';
 import type { Readable } from 'node:stream';
 
@@ -59,15 +60,18 @@ export interface StepDefinitionMatch {
     code: (this: unknown, ...args: unknown[]) => unknown;
     matchesStepName(text: string): boolean;
     getInvocationParameters(options: {
-        step: { text: string; argument?: unknown };
+        step: { text: string; argument?: StepArgument };
         world: unknown;
     }): Promise<{ parameters: unknown[] }>;
 }
 
+/** doc string and / or data table of a step */
+export type StepArgument = PickleStepArgument;
+
 export interface HookResult {
     duration: number;
     message: string | undefined;
-    status: string;
+    status: `${TestStepResultStatus}`;
     exception: Error | undefined;
 }
 
@@ -79,7 +83,7 @@ export interface WorldBase {
 export interface SupportCodeLibrary {
     World: new (options: WorldOptions) => WorldBase;
     stepDefinitions: StepDefinitionMatch[];
-    parameterTypeRegistry: unknown;
+    parameterTypeRegistry: ParameterTypeRegistry;
     /** set only when `setDefaultTimeout` is called */
     defaultTimeout?: number;
     beforeTestRunHookDefinitions: HookDefinition[];

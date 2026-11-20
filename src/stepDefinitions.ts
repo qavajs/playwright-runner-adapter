@@ -49,7 +49,7 @@ export function undefinedStepsMessage(
     const snippets = [
         ...new Set(
             steps
-                .map(({ pickleStep }) => buildSnippet(supportCodeLibrary, pickleStep as PickleStep))
+                .map(({ pickleStep }) => buildSnippet(supportCodeLibrary, pickleStep))
                 .filter((snippet): snippet is string => !!snippet)
         )
     ];

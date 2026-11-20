@@ -1,5 +1,3 @@
-import { wrapPromiseWithTimeout } from '@cucumber/cucumber';
-
 interface DefinitionWithTimeout {
     options?: { timeout?: number };
 }
@@ -26,4 +24,19 @@ export function runWithTimeout<T>(
     const promise = Promise.resolve().then(code);
     if (timeout === undefined) return promise;
     return wrapPromiseWithTimeout(promise, timeout, message.replace('{timeout}', String(timeout)));
+}
+
+/**
+ * Reject with `timeoutMessage` if the promise does not settle within `timeoutInMilliseconds`
+ */
+export async function wrapPromiseWithTimeout<T>(
+    promise: Promise<T>,
+    timeoutInMilliseconds: number,
+    timeoutMessage = `Action did not complete within ${timeoutInMilliseconds} milliseconds`
+): Promise<T> {
+    let timeoutId: NodeJS.Timeout | undefined;
+    const timeout = new Promise<never>((_, reject) => {
+        timeoutId = setTimeout(() => reject(new Error(timeoutMessage)), timeoutInMilliseconds);
+    });
+    return Promise.race([promise, timeout]).finally(() => clearTimeout(timeoutId));
 }

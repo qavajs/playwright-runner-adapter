@@ -3,13 +3,15 @@ import { test, expect } from '@playwright/test';
 import { ParameterTypeRegistry } from '@cucumber/cucumber-expressions';
 import { PickleStepType } from '@cucumber/messages';
 import { tags, filter, resolveTestDetails, resolveRetries, parseTemplate, createTagFilter, DataTable } from '../adapter';
-import { buildSnippet, stepTitle, toPickleArgument } from '../adapter/gherkin';
+import { buildSnippet, callAt, callerLocation, stepTitle, toPickleArgument } from '../adapter/gherkin';
 import { resolveTimeout, runWithTimeout } from '../adapter/timeout';
 import { fixtureNames, withFixtures } from '../adapter/fixtures';
 import { ScenarioRunner } from '../adapter/scenarioRunner';
 import { buildFeatureJson, type ReportedStep, type ScenarioReport } from '../adapter/cucumberJson';
 import { parseFeature } from '../adapter/features';
 import { requireFile } from '../adapter/loader';
+import { SupportCodeLibraryBuilder } from '../adapter/supportCode';
+import { DataTable as JsDataTable } from '../adapter/js';
 import { findStepDefinitions } from '../adapter/stepDefinitions';
 import type { Feature, HookDefinition, StepDefinitionMatch, SupportCodeLibrary } from '../adapter/types';
 
@@ -211,6 +213,21 @@ test.describe('toPickleArgument()', () => {
     });
 });
 
+test.describe('callAt()', () => {
+    test('reports the given location as the caller frame, also for a reused location', () => {
+        const location = { file: '/virtual/config.ts', line: 7, column: 3 };
+        const whereCalled = () => callerLocation(whereCalled);
+        expect(callAt(location, whereCalled, [])).toEqual(location);
+        expect(callAt(location, whereCalled, [])).toEqual(location);
+        expect(callAt({ ...location, line: 9 }, whereCalled, [])).toEqual({ ...location, line: 9 });
+    });
+
+    test('passes arguments and returns the result', () => {
+        expect(callAt({ file: '/virtual/config.ts', line: 1, column: 1 }, (a: number, b: number) => a + b, [1, 2])).toBe(3);
+        expect(callAt(undefined, (a: number) => a * 2, [4])).toBe(8);
+    });
+});
+
 test.describe('createTagFilter()', () => {
     const pickle = (...tagNames: string[]) => ({
         id: '1', uri: 'a.feature', name: 'scenario', language: 'en', steps: [], astNodeIds: [],
@@ -252,6 +269,98 @@ test.describe('buildSnippet()', () => {
             { id: '1', astNodeIds: [], text: 'I have 5 "apples"', type: PickleStepType.ACTION }
         );
         expect(snippet).toContain(`When('I have {int} {string}', async function (int, string) {`);
+    });
+
+    test('lists alternative expressions, step arguments and escapes quotes', () => {
+        const snippet = buildSnippet(
+            { parameterTypeRegistry: new ParameterTypeRegistry() },
+            { text: "it's 5", type: PickleStepType.OUTCOME, argument: { docString: { content: 'x' } } }
+        );
+        expect(snippet).toBe(
+            [
+                "Then('it\\'s {int}', async function (int, docString) {",
+                "// Then('it\\'s {float}', async function (float, docString) {",
+                '  // Write code here that turns the phrase above into concrete actions',
+                "  return 'pending';",
+                '});'
+            ].join('\n')
+        );
+    });
+});
+
+test.describe('SupportCodeLibraryBuilder', () => {
+    class World {
+        test = test;
+        init = () => {};
+    }
+
+    function build(define: (builder: SupportCodeLibraryBuilder) => void) {
+        const builder = new SupportCodeLibraryBuilder();
+        builder.reset(process.cwd(), World);
+        define(builder);
+        return builder.finalize();
+    }
+
+    test('records the location of the calling code', () => {
+        const line = new Error().stack!.split('\n')[1].match(/:(\d+):\d+\)?$/)![1];
+        const library = build(b => b.defineStep('step', () => {}));
+        expect(library.stepDefinitions[0].uri).toBe('test/unit.spec.ts');
+        expect(library.stepDefinitions[0].line).toBe(Number(line) + 1);
+    });
+
+    test('passes parameters, data table and doc string in source order', async () => {
+        const library = build(b => b.defineStep('I have {int} apples', () => {}));
+        const [step] = library.stepDefinitions;
+        expect(step.matchesStepName('I have 5 apples')).toBe(true);
+        expect(step.matchesStepName('I have five apples')).toBe(false);
+        const { parameters } = await step.getInvocationParameters({
+            step: {
+                text: 'I have 5 apples',
+                argument: {
+                    docString: { content: 'doc', argumentIndex: 0 } as never,
+                    dataTable: { rows: [{ cells: [{ value: 'a' }] }], argumentIndex: 1 } as never
+                }
+            },
+            world: {}
+        });
+        expect(parameters[0]).toBe(5);
+        expect(parameters[1]).toBe('doc');
+        expect(parameters[2]).toBeInstanceOf(DataTable);
+    });
+
+    test('wraps definitions keeping their arity', () => {
+        const library = build(b => {
+            b.setDefinitionFunctionWrapper((fn, options) => (...args: unknown[]) => [options, fn(...args)]);
+            b.defineStep('step', { wrapperOptions: 'opt' }, (a: number, b: number) => a + b);
+        });
+        const { code } = library.stepDefinitions[0];
+        expect(code.length).toBe(2);
+        expect(code.call({}, 1, 2)).toEqual(['opt', 3]);
+    });
+
+    test('filters hooks by tags and keeps hook names', () => {
+        const library = build(b => {
+            b.defineHook('beforeTestCase', '@a', () => {});
+            b.defineHook('afterTestCase', { name: 'named' }, () => {});
+        });
+        const pickle = (tag: string) => ({ tags: [{ name: tag }] }) as never;
+        expect(library.beforeTestCaseHookDefinitions[0].appliesToTestCase(pickle('@a'))).toBe(true);
+        expect(library.beforeTestCaseHookDefinitions[0].appliesToTestCase(pickle('@b'))).toBe(false);
+        expect(library.afterTestCaseHookDefinitions[0].name).toBe('named');
+    });
+
+    test('fails on undefined parameter types and invalid definitions', () => {
+        expect(() => build(b => b.defineStep('I have {nope} apples', () => {}))).toThrow(
+            /Undefined parameter types[\s\S]*\{nope\} in 'I have \{nope\} apples' - test\/unit\.spec\.ts:\d+/
+        );
+        expect(() => build(b => b.defineStep('step', 'not a function'))).toThrow('code must be a function');
+        expect(() => build(b => b.defineHook('beforeTestCase', 'smoke', () => {}))).toThrow("Tags must start with '@'");
+    });
+
+    test('data tables of both builds are instances of DataTable', () => {
+        expect(new JsDataTable([['a']])).toBeInstanceOf(DataTable);
+        expect(new DataTable([['a']])).toBeInstanceOf(JsDataTable);
+        expect([['a']]).not.toBeInstanceOf(DataTable);
     });
 });
 
